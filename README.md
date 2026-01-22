@@ -96,12 +96,52 @@
 - NextJS (React)
 - NestJS
 - Prisma (Default to PostgreSQL)
-- Temporal
+- Redis
 - Resend (email notifications)
 
 ## Quick Start
 
 To have the project up and running, please follow the [Quick Start Guide](https://docs.postiz.com/quickstart)
+
+## Local Development
+
+### Prerequisites
+
+- Node.js 20+
+- pnpm 8+
+- Docker & Docker Compose
+
+### One-Command Setup
+
+```bash
+./scripts/setup.sh
+```
+
+This will start PostgreSQL/Redis, install dependencies, and set up the database.
+
+### Start Development Servers
+
+```bash
+# Start everything (frontend + backend + orchestrator)
+pnpm run dev
+
+# Or run individually
+pnpm run dev:frontend   # http://localhost:4200
+pnpm run dev:backend    # http://localhost:3000
+```
+
+### Available Scripts
+
+| Script | Description |
+|--------|-------------|
+| `pnpm run dev` | Start all services with hot reload |
+| `pnpm run dev:frontend` | Frontend only |
+| `pnpm run dev:backend` | Backend only |
+| `pnpm run dev:docker` | Start DB & Redis containers |
+| `pnpm run build` | Production build |
+| `pnpm run prisma-db-push` | Push schema to database |
+
+For detailed setup instructions, see [Local Development Guide](docs/LOCAL_DEVELOPMENT.md).
 
 ## Sponsor Postiz
 

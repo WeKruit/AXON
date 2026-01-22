@@ -15,6 +15,7 @@ import { useVariables } from '@gitroom/react/helpers/variable.context';
 import { FarcasterProvider } from '@gitroom/frontend/components/auth/providers/farcaster.provider';
 import WalletProvider from '@gitroom/frontend/components/auth/providers/wallet.provider';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
+import { FirebaseGoogleProvider } from '@gitroom/frontend/components/auth/providers/firebase-google.provider';
 type Inputs = {
   email: string;
   password: string;
@@ -25,7 +26,7 @@ export function Login() {
   const t = useT();
   const [loading, setLoading] = useState(false);
   const [notActivated, setNotActivated] = useState(false);
-  const { isGeneral, neynarClientId, billingEnabled, genericOauth } =
+  const { isGeneral, neynarClientId, billingEnabled, genericOauth, firebaseEnabled } =
     useVariables();
   const resolver = useMemo(() => {
     return classValidatorResolver(LoginUserDto);
@@ -73,7 +74,9 @@ export function Login() {
             {t('continue_with', 'Continue With')}
           </div>
           <div className="flex flex-col">
-            {isGeneral && genericOauth ? (
+            {firebaseEnabled ? (
+              <FirebaseGoogleProvider />
+            ) : isGeneral && genericOauth ? (
               <OauthProvider />
             ) : !isGeneral ? (
               <GithubProvider />

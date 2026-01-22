@@ -3,5 +3,5 @@ export interface ProvidersInterface {
   getToken(code: string): Promise<string>;
   getUser(
     providerToken: string
-  ): Promise<{ email: string; id: string }> | false;
+  ): Promise<{ email: string; id: string } | false> | false;
 }

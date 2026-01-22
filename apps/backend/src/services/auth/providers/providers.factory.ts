@@ -5,6 +5,7 @@ import { GoogleProvider } from '@gitroom/backend/services/auth/providers/google.
 import { FarcasterProvider } from '@gitroom/backend/services/auth/providers/farcaster.provider';
 import { WalletProvider } from '@gitroom/backend/services/auth/providers/wallet.provider';
 import { OauthProvider } from '@gitroom/backend/services/auth/providers/oauth.provider';
+import { FirebaseProvider } from '@gitroom/backend/services/auth/providers/firebase.provider';
 
 export class ProvidersFactory {
   static loadProvider(provider: Provider): ProvidersInterface {
@@ -19,6 +20,8 @@ export class ProvidersFactory {
         return new WalletProvider();
       case Provider.GENERIC:
         return new OauthProvider();
+      case Provider.FIREBASE:
+        return new FirebaseProvider();
     }
   }
 }

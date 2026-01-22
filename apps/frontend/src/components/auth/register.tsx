@@ -22,6 +22,7 @@ import { FarcasterProvider } from '@gitroom/frontend/components/auth/providers/f
 import dynamic from 'next/dynamic';
 import { WalletUiProvider } from '@gitroom/frontend/components/auth/providers/placeholder/wallet.ui.provider';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
+import { FirebaseGoogleProvider } from '@gitroom/frontend/components/auth/providers/firebase-google.provider';
 const WalletProvider = dynamic(
   () => import('@gitroom/frontend/components/auth/providers/wallet.provider'),
   {
@@ -88,7 +89,7 @@ export function RegisterAfter({
   provider: string;
 }) {
   const t = useT();
-  const { isGeneral, genericOauth, neynarClientId, billingEnabled } =
+  const { isGeneral, genericOauth, neynarClientId, billingEnabled, firebaseEnabled } =
     useVariables();
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -154,7 +155,9 @@ export function RegisterAfter({
           <div className="text-[14px] mt-[32px] mb-[12px]">{t('continue_with', 'Continue With')}</div>
           <div className="flex flex-col">
             {!isAfterProvider &&
-              (!isGeneral ? (
+              (firebaseEnabled ? (
+                <FirebaseGoogleProvider />
+              ) : !isGeneral ? (
                 <GithubProvider />
               ) : (
                 <div className="gap-[8px] flex">

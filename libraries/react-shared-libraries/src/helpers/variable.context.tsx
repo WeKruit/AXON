@@ -25,6 +25,7 @@ interface VariableContextInterface {
   dub: boolean;
   transloadit: string[];
   sentryDsn: string;
+  firebaseEnabled: boolean;
 }
 const VariableContext = createContext({
   stripeClient: '',
@@ -49,6 +50,7 @@ const VariableContext = createContext({
   dub: false,
   transloadit: [],
   sentryDsn: '',
+  firebaseEnabled: false,
 } as VariableContextInterface);
 export const VariableContextComponent: FC<
   VariableContextInterface & {
