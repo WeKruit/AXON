@@ -78,6 +78,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                 ]
               : []
           }
+          firebaseEnabled={!!process.env.NEXT_PUBLIC_FIREBASE_API_KEY}
         >
           <SentryComponent>
             {/*<SetTimezone />*/}
