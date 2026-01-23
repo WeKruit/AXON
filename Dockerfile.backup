@@ -1,0 +1,45 @@
+# Backend-only Dockerfile for Cloud Run
+# Use Node 22 slim (NOT alpine - Temporal SDK needs glibc)
+FROM node:22-slim AS base
+RUN npm install -g pnpm@10.6.1
+
+# Build backend (single stage with full context)
+FROM base AS builder
+WORKDIR /app
+
+# Copy all project files needed for build
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY tsconfig*.json ./
+COPY apps/backend ./apps/backend
+COPY apps/orchestrator ./apps/orchestrator
+COPY libraries ./libraries
+
+# Install all dependencies (including devDependencies for build)
+RUN pnpm install --frozen-lockfile
+
+# Generate Prisma client
+RUN pnpm run prisma-generate
+
+# Increase Node.js memory limit for build (NestJS requires more memory)
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+RUN pnpm run build:backend
+
+# Production image
+FROM node:22-slim AS runner
+WORKDIR /app
+
+# Install pnpm in runner for prisma
+RUN npm install -g pnpm@10.6.1
+
+# Copy built backend (output is in apps/backend/dist/)
+COPY --from=builder /app/apps/backend/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/libraries/nestjs-libraries/src/database/prisma/schema.prisma ./prisma/schema.prisma
+COPY --from=builder /app/package.json ./
+
+# Cloud Run uses PORT env var
+ENV PORT=8080
+EXPOSE 8080
+
+# Start the backend (skip prisma db push - database should be synced separately)
+CMD ["node", "--experimental-require-module", "./dist/apps/backend/src/main.js"]

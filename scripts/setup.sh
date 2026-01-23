@@ -105,3 +105,6 @@ echo -e "${YELLOW}Admin tools:${NC}"
 echo -e "  pgAdmin: http://localhost:8081 (admin@admin.com / admin)"
 echo -e "  Redis Insight: http://localhost:5540"
 echo ""
+
+docker run --rm -d --name temporal -p 7233:7233 temporalio/auto-setup:latest
+docker start temporal

@@ -46,6 +46,61 @@ const jakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
 });
 
+// Global loading skeleton component
+const LayoutSkeleton = () => (
+  <div
+    className={clsx(
+      'flex flex-col min-h-screen min-w-screen text-newTextColor p-[12px]',
+      jakartaSans.className
+    )}
+  >
+    <div className="flex-1 flex gap-[8px]">
+      {/* Sidebar skeleton */}
+      <div className="flex flex-col bg-newBgColorInner w-[80px] rounded-[12px]">
+        <div className="fixed h-full w-[64px] start-[17px] flex flex-1 top-0">
+          <div className="flex flex-col h-full gap-[32px] flex-1 py-[12px]">
+            {/* Logo placeholder */}
+            <div className="h-[40px] w-[40px] bg-newBgLineColor rounded-lg animate-pulse mx-auto" />
+            {/* Menu items placeholder */}
+            <div className="flex flex-col gap-[16px] px-[8px]">
+              {[...Array(6)].map((_, i) => (
+                <div
+                  key={i}
+                  className="h-[40px] w-[40px] bg-newBgLineColor rounded-lg animate-pulse mx-auto"
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* Main content skeleton */}
+      <div className="flex-1 bg-newBgLineColor rounded-[12px] overflow-hidden flex flex-col gap-[1px]">
+        {/* Header skeleton */}
+        <div className="flex bg-newBgColorInner h-[80px] px-[20px] items-center">
+          <div className="h-[28px] w-[200px] bg-newBgLineColor rounded animate-pulse" />
+          <div className="flex-1" />
+          <div className="flex gap-[20px]">
+            {[...Array(5)].map((_, i) => (
+              <div
+                key={i}
+                className="h-[24px] w-[24px] bg-newBgLineColor rounded animate-pulse"
+              />
+            ))}
+          </div>
+        </div>
+        {/* Content skeleton */}
+        <div className="flex flex-1 gap-[1px] bg-newBgColorInner p-[20px]">
+          <div className="flex flex-col gap-[16px] w-full">
+            <div className="h-[120px] bg-newBgLineColor rounded-lg animate-pulse" />
+            <div className="h-[200px] bg-newBgLineColor rounded-lg animate-pulse" />
+            <div className="h-[160px] bg-newBgLineColor rounded-lg animate-pulse" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 export const LayoutComponent = ({ children }: { children: ReactNode }) => {
   const fetch = useFetch();
 
@@ -56,7 +111,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
   const load = useCallback(async (path: string) => {
     return await (await fetch(path)).json();
   }, []);
-  const { data: user, mutate } = useSWR('/user/self', load, {
+  const { data: user, mutate, isLoading } = useSWR('/user/self', load, {
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
     revalidateIfStale: false,
@@ -64,7 +119,8 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
     refreshWhenHidden: false,
   });
 
-  if (!user) return null;
+  // Show skeleton while loading instead of blocking render
+  if (isLoading || !user) return <LayoutSkeleton />;
 
   return (
     <ContextWrapper user={user}>

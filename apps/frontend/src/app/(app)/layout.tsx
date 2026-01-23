@@ -1,6 +1,6 @@
 import { SentryComponent } from '@gitroom/frontend/components/layout/sentry.component';
 
-export const dynamic = 'force-dynamic';
+// Removed 'force-dynamic' to enable Next.js caching for better performance
 import '../global.scss';
 import 'react-tooltip/dist/react-tooltip.css';
 import '@copilotkit/react-ui/styles.css';

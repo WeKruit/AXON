@@ -1,0 +1,40 @@
+app = "wecrew-temporal"
+primary_region = "lax"
+
+[build]
+  image = "temporalio/auto-setup:latest"
+
+[env]
+  DB = "postgres12"
+  DB_PORT = "5432"
+  POSTGRES_SEEDS = "db.lwpywijwzqsuhswybcbm.supabase.co"
+  DBNAME = "postgres"
+  VISIBILITY_DBNAME = "postgres"
+  POSTGRES_USER = "postgres"
+  SKIP_DEFAULT_NAMESPACE_CREATION = "false"
+  SKIP_SCHEMA_SETUP = "false"
+  SQL_TLS_ENABLED = "true"
+  SQL_TLS = "true"
+  BIND_ON_IP = "0.0.0.0"
+  TEMPORAL_BROADCAST_ADDRESS = "0.0.0.0"
+  FRONTEND_MEMBERSHIP_PORT = "6933"
+  FRONTEND_PORT = "7233"
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 7233
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[services.ports]]
+    port = 7233
+    handlers = ["tls"]
+
+  [[services.ports]]
+    port = 7234
+    handlers = []
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"

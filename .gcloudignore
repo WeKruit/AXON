@@ -1,0 +1,60 @@
+# Cloud Build ignore file
+# Only include what's needed for backend/orchestrator builds
+
+# Dependencies - will be reinstalled in Docker
+node_modules/
+**/node_modules/
+
+# Git
+.git/
+
+# IDE
+.idea/
+.vscode/
+*.sublime-workspace
+
+# Build outputs (we rebuild in Docker)
+dist/
+tmp/
+out-tsc/
+.next/
+**/.next/
+
+# Environment files (secrets passed separately)
+.env
+.env.*
+!.env.example
+
+# Test outputs
+coverage/
+reports/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker compose files
+docker-compose*.yaml
+Dockerfile.backup
+
+# Apps not needed for backend/orchestrator
+apps/frontend/
+apps/extension/
+apps/commands/
+apps/sdk/
+
+# Deploy folder (contains deployment configs, not needed in image)
+# Note: Dockerfile is copied to root before build
+deploy/
+temporal-flyio/
+
+# Docs
+*.md
+LICENSE
+
+# Other large/unnecessary files
+var/
+dynamicconfig/
+Jenkins/
+docs/
+scripts/

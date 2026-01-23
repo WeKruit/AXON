@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "name": "axon-wecrew",
+  "framework": "nextjs",
+  "buildCommand": "cd ../.. && pnpm install && pnpm exec nx build frontend --prod",
+  "outputDirectory": "../../dist/apps/frontend/.next",
+  "installCommand": "echo 'Using root install'",
+  "devCommand": "cd ../.. && pnpm run dev:frontend"
+}
