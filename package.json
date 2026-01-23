@@ -160,7 +160,7 @@
     "emoji-picker-react": "^4.12.0",
     "evp_bytestokey": "^1.0.3",
     "facebook-nodejs-business-sdk": "^21.0.5",
-    "fast-xml-parser": "^4.5.1",
+    "fast-xml-parser": "^5.3.3",
     "firebase": "^12.8.0",
     "firebase-admin": "^13.6.0",
     "google-auth-library": "^9.11.0",
