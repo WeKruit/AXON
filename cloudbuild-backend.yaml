@@ -1,0 +1,19 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/axon-backend:$SHORT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/axon-backend:latest'
+      - '-f'
+      - 'Dockerfile.backend'
+      - '.'
+
+images:
+  - 'gcr.io/$PROJECT_ID/axon-backend:$SHORT_SHA'
+  - 'gcr.io/$PROJECT_ID/axon-backend:latest'
+
+timeout: '1800s'
+options:
+  machineType: 'E2_HIGHCPU_8'

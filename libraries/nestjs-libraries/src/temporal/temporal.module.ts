@@ -6,11 +6,17 @@ export const getTemporalModule = (
   path?: string,
   activityClasses?: any[]
 ) => {
+  // Determine if we should use TLS (for Fly.io or other external deployments)
+  const address = process.env.TEMPORAL_ADDRESS || 'localhost:7233';
+  // Only enable TLS if explicitly set to 'true', not based on hostname
+  const useTls = process.env.TEMPORAL_TLS === 'true';
+
   return TemporalModule.register({
     isGlobal: true,
     connection: {
-      address: process.env.TEMPORAL_ADDRESS || 'localhost:7233',
+      address,
       namespace: process.env.TEMPORAL_NAMESPACE || 'default',
+      ...(useTls ? { tls: true } : {}),
     },
     taskQueue: 'main',
     logLevel: 'error',

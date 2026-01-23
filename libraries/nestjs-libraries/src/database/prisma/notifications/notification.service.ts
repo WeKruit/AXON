@@ -1,8 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional, Inject } from '@nestjs/common';
 import { NotificationsRepository } from '@gitroom/nestjs-libraries/database/prisma/notifications/notifications.repository';
 import { EmailService } from '@gitroom/nestjs-libraries/services/email.service';
 import { OrganizationRepository } from '@gitroom/nestjs-libraries/database/prisma/organizations/organization.repository';
-import { TemporalService } from 'nestjs-temporal-core';
 import { TypedSearchAttributes } from '@temporalio/common';
 import { organizationId } from '@gitroom/nestjs-libraries/temporal/temporal.search.attribute';
 
@@ -14,7 +13,7 @@ export class NotificationService {
     private _notificationRepository: NotificationsRepository,
     private _emailService: EmailService,
     private _organizationRepository: OrganizationRepository,
-    private _temporalService: TemporalService
+    @Optional() @Inject('TemporalService') private _temporalService?: any
   ) {}
 
   getMainPageCount(organizationId: string, userId: string) {
@@ -46,6 +45,12 @@ export class NotificationService {
 
     if (digest) {
       try {
+        // Skip digest workflow if Temporal is not available (backend-only mode)
+        if (!this._temporalService?.client) {
+          console.log('[NotificationService] Temporal not available - skipping digest workflow, sending email directly');
+          await this.sendEmailsToOrg(orgId, subject, message, type);
+          return;
+        }
         await this._temporalService.client
           .getRawClient()
           ?.workflow.signalWithStart('digestEmailWorkflow', {

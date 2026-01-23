@@ -8,6 +8,10 @@ import dayjs from 'dayjs';
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 import { Organization, ShortLinkPreference } from '@prisma/client';
 import { AutopostService } from '@gitroom/nestjs-libraries/database/prisma/autopost/autopost.service';
+import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
+
+// Cache TTL for user organizations (5 minutes)
+const USER_ORGS_CACHE_TTL = 300;
 
 @Injectable()
 export class OrganizationService {
@@ -32,13 +36,16 @@ export class OrganizationService {
     return this._organizationRepository.getCount();
   }
 
-  addUserToOrg(
+  async addUserToOrg(
     userId: string,
     id: string,
     orgId: string,
     role: 'USER' | 'ADMIN'
   ) {
-    return this._organizationRepository.addUserToOrg(userId, id, orgId, role);
+    const result = await this._organizationRepository.addUserToOrg(userId, id, orgId, role);
+    // Invalidate cache when user is added to org
+    await this.invalidateUserOrgsCache(userId);
+    return result;
   }
 
   getOrgById(id: string) {
@@ -53,8 +60,39 @@ export class OrganizationService {
     return this._organizationRepository.getUserOrg(id);
   }
 
-  getOrgsByUserId(userId: string) {
-    return this._organizationRepository.getOrgsByUserId(userId);
+  async getOrgsByUserId(userId: string) {
+    const cacheKey = `user_orgs:${userId}`;
+
+    // Try to get from cache first
+    try {
+      const cached = await ioRedis.get(cacheKey);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch (e) {
+      // Cache miss or error, continue to fetch from DB
+    }
+
+    // Fetch from database
+    const orgs = await this._organizationRepository.getOrgsByUserId(userId);
+
+    // Store in cache
+    try {
+      await ioRedis.set(cacheKey, JSON.stringify(orgs), 'EX', USER_ORGS_CACHE_TTL);
+    } catch (e) {
+      // Cache write failed, continue without caching
+    }
+
+    return orgs;
+  }
+
+  // Invalidate user orgs cache when organization changes
+  async invalidateUserOrgsCache(userId: string) {
+    try {
+      await ioRedis.del(`user_orgs:${userId}`);
+    } catch (e) {
+      // Cache invalidation failed, ignore
+    }
   }
 
   updateApiKey(orgId: string) {
@@ -102,7 +140,10 @@ export class OrganizationService {
       throw new Error('You do not have permission to delete this user');
     }
 
-    return this._organizationRepository.deleteTeamMember(org.id, userId);
+    const result = await this._organizationRepository.deleteTeamMember(org.id, userId);
+    // Invalidate cache when user is removed from org
+    await this.invalidateUserOrgsCache(userId);
+    return result;
   }
 
   disableOrEnableNonSuperAdminUsers(orgId: string, disable: boolean) {

@@ -3,8 +3,16 @@ initializeSentry('backend', true);
 
 import { loadSwagger } from '@gitroom/helpers/swagger/load.swagger';
 import { json } from 'express';
-import { Runtime } from '@temporalio/worker';
-Runtime.install({ shutdownSignals: [] });
+
+// Temporal SDK initialization - optional for backend (only required by orchestrator)
+try {
+  const { Runtime } = require('@temporalio/worker');
+  Runtime.install({ shutdownSignals: [] });
+} catch (e) {
+  // Temporal SDK initialization failed - this is OK for backend-only deployment
+  // The orchestrator will handle Temporal connections
+  console.log('Temporal SDK not initialized (optional for backend)');
+}
 
 process.env.TZ = 'UTC';
 
@@ -43,7 +51,16 @@ async function start() {
     },
   });
 
-  await startMcp(app);
+  // Defer MCP initialization to not block server startup
+  // MCP will initialize on first request to /mcp/* endpoints
+  setImmediate(async () => {
+    try {
+      await startMcp(app);
+      Logger.log('MCP server initialized', 'MCP');
+    } catch (e) {
+      Logger.error('Failed to initialize MCP server', e, 'MCP');
+    }
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({

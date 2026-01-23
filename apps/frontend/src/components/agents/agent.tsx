@@ -73,7 +73,7 @@ export const AgentList: FC<{ onChange: (arr: any[]) => void }> = ({
 
   const [collapseMenu, setCollapseMenu] = useCookie('collapseMenu', '0');
 
-  const { data } = useSWR('integrations', load, {
+  const { data, isLoading } = useSWR('integrations', load, {
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
     revalidateIfStale: false,
@@ -138,7 +138,17 @@ export const AgentList: FC<{ onChange: (arr: any[]) => void }> = ({
           </div>
         </div>
         <div className={clsx('flex flex-col gap-[15px]')}>
-          {sortedIntegrations.map((integration, index) => (
+          {isLoading && (
+            <>
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="flex gap-[12px] items-center">
+                  <div className="w-[36px] h-[36px] bg-newBgLineColor rounded-[8px] animate-pulse" />
+                  <div className="flex-1 h-[16px] bg-newBgLineColor rounded animate-pulse group-[.sidebar]:hidden" />
+                </div>
+              ))}
+            </>
+          )}
+          {!isLoading && sortedIntegrations.map((integration, index) => (
             <div
               onClick={setIntegration(integration)}
               key={integration.id}
@@ -196,6 +206,19 @@ export const AgentList: FC<{ onChange: (arr: any[]) => void }> = ({
   );
 };
 
+const ThreadsSkeleton = () => (
+  <>
+    <div className="mb-[15px] justify-center flex">
+      <div className="w-full h-[44px] bg-newBgLineColor rounded-md animate-pulse" />
+    </div>
+    <div className="flex flex-col gap-[8px]">
+      {[...Array(5)].map((_, i) => (
+        <div key={i} className="h-[32px] bg-newBgLineColor rounded-[10px] animate-pulse" />
+      ))}
+    </div>
+  </>
+);
+
 export const PropertiesContext = createContext({ properties: [] });
 export const Agent: FC<{ children: ReactNode }> = ({ children }) => {
   const [properties, setProperties] = useState([]);
@@ -219,7 +242,7 @@ const Threads: FC = () => {
   }, []);
   const { id } = useParams<{ id: string }>();
 
-  const { data } = useSWR('threads', threads);
+  const { data, isLoading } = useSWR('threads', threads);
 
   return (
     <div
@@ -229,46 +252,52 @@ const Threads: FC = () => {
       )}
     >
       <div className="absolute top-0 start-0 w-full h-full p-[20px] overflow-auto scrollbar scrollbar-thumb-fifth scrollbar-track-newBgColor">
-        <div className="mb-[15px] justify-center flex group-[.sidebar]:pb-[15px]">
-          <Link
-            href={`/agents`}
-            className="text-white whitespace-nowrap flex-1 pt-[12px] pb-[14px] ps-[16px] pe-[20px] group-[.sidebar]:p-0 min-h-[44px] max-h-[44px] rounded-md bg-btnPrimary flex justify-center items-center gap-[5px] outline-none"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="21"
-              height="20"
-              viewBox="0 0 21 20"
-              fill="none"
-              className="min-w-[21px] min-h-[20px]"
-            >
-              <path
-                d="M10.5001 4.16699V15.8337M4.66675 10.0003H16.3334"
-                stroke="white"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <div className="flex-1 text-start text-[16px] group-[.sidebar]:hidden">
-              {t('start_a_new_chat', 'Start a new chat')}
+        {isLoading ? (
+          <ThreadsSkeleton />
+        ) : (
+          <>
+            <div className="mb-[15px] justify-center flex group-[.sidebar]:pb-[15px]">
+              <Link
+                href={`/agents`}
+                className="text-white whitespace-nowrap flex-1 pt-[12px] pb-[14px] ps-[16px] pe-[20px] group-[.sidebar]:p-0 min-h-[44px] max-h-[44px] rounded-md bg-btnPrimary flex justify-center items-center gap-[5px] outline-none"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="21"
+                  height="20"
+                  viewBox="0 0 21 20"
+                  fill="none"
+                  className="min-w-[21px] min-h-[20px]"
+                >
+                  <path
+                    d="M10.5001 4.16699V15.8337M4.66675 10.0003H16.3334"
+                    stroke="white"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <div className="flex-1 text-start text-[16px] group-[.sidebar]:hidden">
+                  {t('start_a_new_chat', 'Start a new chat')}
+                </div>
+              </Link>
             </div>
-          </Link>
-        </div>
-        <div className="flex flex-col gap-[1px]">
-          {data?.threads?.map((p: any) => (
-            <Link
-              className={clsx(
-                'overflow-ellipsis overflow-hidden whitespace-nowrap hover:bg-newBgColor px-[10px] py-[6px] rounded-[10px] cursor-pointer',
-                p.id === id && 'bg-newBgColor'
-              )}
-              href={`/agents/${p.id}`}
-              key={p.id}
-            >
-              {p.title}
-            </Link>
-          ))}
-        </div>
+            <div className="flex flex-col gap-[1px]">
+              {data?.threads?.map((p: any) => (
+                <Link
+                  className={clsx(
+                    'overflow-ellipsis overflow-hidden whitespace-nowrap hover:bg-newBgColor px-[10px] py-[6px] rounded-[10px] cursor-pointer',
+                    p.id === id && 'bg-newBgColor'
+                  )}
+                  href={`/agents/${p.id}`}
+                  key={p.id}
+                >
+                  {p.title}
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

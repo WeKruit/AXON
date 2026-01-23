@@ -1,0 +1,32 @@
+# Fly.io configuration for Temporal Server
+# Cost: ~$5-10/month on shared-cpu-1x
+
+app = "wecrew-temporal"
+primary_region = "lax"
+
+[build]
+  image = "temporalio/auto-setup:latest"
+
+[env]
+  DB = "postgres12"
+  POSTGRES_SEEDS = "db.lwpywijwzqsuhswybcbm.supabase.co"
+  DB_PORT = "5432"
+  POSTGRES_USER = "postgres"
+  SKIP_DEFAULT_NAMESPACE_CREATION = "false"
+  # Bind to all interfaces so Fly.io proxy can reach the service
+  BIND_ON_IP = "0.0.0.0"
+  TEMPORAL_ADDRESS = "0.0.0.0:7233"
+
+# Use raw TCP service for gRPC
+[[services]]
+  protocol = "tcp"
+  internal_port = 7233
+
+  [[services.ports]]
+    port = 7233
+    handlers = []
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512

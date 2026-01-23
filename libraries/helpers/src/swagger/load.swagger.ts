@@ -1,7 +1,13 @@
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, Logger } from '@nestjs/common';
 
 export const loadSwagger = (app: INestApplication) => {
+  // Only load Swagger in development to improve startup time in production
+  if (process.env.NODE_ENV === 'production') {
+    Logger.log('Swagger disabled in production for faster startup', 'Swagger');
+    return;
+  }
+
   const config = new DocumentBuilder()
     .setTitle('Postiz Swagger file')
     .setDescription('API description')
@@ -10,4 +16,5 @@ export const loadSwagger = (app: INestApplication) => {
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document);
+  Logger.log('Swagger docs available at /docs', 'Swagger');
 };

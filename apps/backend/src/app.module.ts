@@ -1,4 +1,4 @@
-import { Global, Module } from '@nestjs/common';
+import { Global, Module, DynamicModule } from '@nestjs/common';
 import { DatabaseModule } from '@gitroom/nestjs-libraries/database/prisma/database.module';
 import { ApiModule } from '@gitroom/backend/api/api.module';
 import { APP_GUARD } from '@nestjs/core';
@@ -12,14 +12,32 @@ import { VideoModule } from '@gitroom/nestjs-libraries/videos/video.module';
 import { SentryModule } from '@sentry/nestjs/setup';
 import { FILTER } from '@gitroom/nestjs-libraries/sentry/sentry.exception';
 import { ChatModule } from '@gitroom/nestjs-libraries/chat/chat.module';
+
+// Static imports for Temporal modules - all are imported but only used based on SKIP_TEMPORAL
+import { MockTemporalModule } from './temporal/temporal.mock.module';
 import { getTemporalModule } from '@gitroom/nestjs-libraries/temporal/temporal.module';
 import { TemporalRegisterMissingSearchAttributesModule } from '@gitroom/nestjs-libraries/temporal/temporal.register';
 import { InfiniteWorkflowRegisterModule } from '@gitroom/nestjs-libraries/temporal/infinite.workflow.register';
+
+// Determine which Temporal modules to use at runtime
+const temporalModules: (DynamicModule | any)[] = process.env.SKIP_TEMPORAL === 'true'
+  ? [MockTemporalModule]
+  : [
+      getTemporalModule(false),
+      TemporalRegisterMissingSearchAttributesModule,
+      InfiniteWorkflowRegisterModule,
+    ];
+
+if (process.env.SKIP_TEMPORAL === 'true') {
+  console.log('[Backend] Using MockTemporalModule - Temporal features disabled');
+}
 
 @Global()
 @Module({
   imports: [
     SentryModule.forRoot(),
+    // MockTemporalModule must come before DatabaseModule since services depend on TemporalService
+    ...temporalModules,
     DatabaseModule,
     ApiModule,
     PublicApiModule,
@@ -27,9 +45,6 @@ import { InfiniteWorkflowRegisterModule } from '@gitroom/nestjs-libraries/tempor
     ThirdPartyModule,
     VideoModule,
     ChatModule,
-    getTemporalModule(false),
-    TemporalRegisterMissingSearchAttributesModule,
-    InfiniteWorkflowRegisterModule,
     ThrottlerModule.forRoot([
       {
         ttl: 3600000,

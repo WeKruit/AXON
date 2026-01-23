@@ -1,11 +1,19 @@
-import { Metadata } from 'next';
-import { redirect } from 'next/navigation';
+'use client';
 
-export const metadata: Metadata = {
-  title: 'Postiz - Agent',
-  description: '',
-};
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { LoadingComponent } from '@gitroom/frontend/components/layout/loading';
 
-export default async function Page() {
-  return redirect('/agents/new');
+export default function Page() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace('/agents/new');
+  }, [router]);
+
+  return (
+    <div className="flex flex-1 bg-newBgColorInner">
+      <LoadingComponent />
+    </div>
+  );
 }
