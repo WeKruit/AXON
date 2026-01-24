@@ -81,9 +81,8 @@ export class AuthController {
         expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
       });
 
-      if (process.env.NOT_SECURED) {
-        response.header('auth', jwt);
-      }
+      // Always send auth header for cross-origin auth flow
+      response.header('auth', jwt);
 
       if (typeof addedOrg !== 'boolean' && addedOrg?.organizationId) {
         response.cookie('showorg', addedOrg.organizationId, {
@@ -98,9 +97,8 @@ export class AuthController {
           expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
         });
 
-        if (process.env.NOT_SECURED) {
-          response.header('showorg', addedOrg.organizationId);
-        }
+        // Always send showorg header for cross-origin auth flow
+        response.header('showorg', addedOrg.organizationId);
       }
 
       Sentry.metrics.count("new_user", 1);
@@ -146,9 +144,8 @@ export class AuthController {
         expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
       });
 
-      if (process.env.NOT_SECURED) {
-        response.header('auth', jwt);
-      }
+      // Always send auth header for cross-origin auth flow
+      response.header('auth', jwt);
 
       if (typeof addedOrg !== 'boolean' && addedOrg?.organizationId) {
         response.cookie('showorg', addedOrg.organizationId, {
@@ -163,9 +160,8 @@ export class AuthController {
           expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
         });
 
-        if (process.env.NOT_SECURED) {
-          response.header('showorg', addedOrg.organizationId);
-        }
+        // Always send showorg header for cross-origin auth flow
+        response.header('showorg', addedOrg.organizationId);
       }
 
       response.header('reload', 'true');
@@ -226,9 +222,8 @@ export class AuthController {
       expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
     });
 
-    if (process.env.NOT_SECURED) {
-      response.header('auth', activate);
-    }
+    // Always send auth header for cross-origin auth flow
+    response.header('auth', activate);
 
     response.header('onboarding', 'true');
 
@@ -274,9 +269,8 @@ export class AuthController {
       expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
     });
 
-    if (process.env.NOT_SECURED) {
-      response.header('auth', jwt);
-    }
+    // Always send auth header for cross-origin auth flow
+    response.header('auth', jwt);
 
     response.header('reload', 'true');
 

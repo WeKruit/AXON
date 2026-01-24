@@ -44,11 +44,16 @@ ENV_FILE="${SCRIPT_DIR}/.env.yaml"
     printf 'REDIS_URL: "%s"\n' "${REDIS_URL}"
     printf 'JWT_SECRET: "%s"\n' "${JWT_SECRET}"
     printf 'TEMPORAL_ADDRESS: "%s"\n' "${TEMPORAL_ADDRESS}"
+    printf 'TEMPORAL_NAMESPACE: "default"\n'
+    printf 'SKIP_TEMPORAL: "false"\n'
     printf 'FIREBASE_PROJECT_ID: "%s"\n' "${FIREBASE_PROJECT_ID}"
     printf 'FIREBASE_CLIENT_EMAIL: "%s"\n' "${FIREBASE_CLIENT_EMAIL}"
+    printf 'FIREBASE_PRIVATE_KEY: "%s"\n' "${FIREBASE_PRIVATE_KEY}"
     printf 'FRONTEND_URL: "%s"\n' "${DEPLOY_FRONTEND_URL}"
     printf 'NEXT_PUBLIC_BACKEND_URL: "%s"\n' "${BACKEND_URL}"
     printf 'BACKEND_INTERNAL_URL: "%s"\n' "${BACKEND_URL}"
+    printf 'MAIN_URL: "%s"\n' "${BACKEND_URL}"
+    printf 'STORAGE_PROVIDER: "local"\n'
     printf 'NODE_ENV: "production"\n'
 } > "${ENV_FILE}"
 
