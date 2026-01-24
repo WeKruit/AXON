@@ -37,11 +37,13 @@ cp "${SCRIPT_DIR}/Dockerfile" "${PROJECT_ROOT}/Dockerfile"
 
 # Create env vars file for gcloud (handles special characters properly)
 ENV_FILE="${SCRIPT_DIR}/.env.yaml"
-cat > "${ENV_FILE}" << EOF
-DATABASE_URL: "${DATABASE_URL}"
-REDIS_URL: "${REDIS_URL}"
-TEMPORAL_ADDRESS: "${TEMPORAL_ADDRESS}"
-EOF
+{
+    printf 'DATABASE_URL: "%s"\n' "${DATABASE_URL}"
+    printf 'REDIS_URL: "%s"\n' "${REDIS_URL}"
+    printf 'TEMPORAL_ADDRESS: "%s"\n' "${TEMPORAL_ADDRESS}"
+    printf 'TEMPORAL_NAMESPACE: "default"\n'
+    printf 'NODE_ENV: "production"\n'
+} > "${ENV_FILE}"
 
 # Build image using Cloud Build
 echo "Building Docker image with Cloud Build..."

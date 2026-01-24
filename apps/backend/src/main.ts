@@ -34,14 +34,17 @@ async function start() {
       allowedHeaders: [
         'Content-Type',
         'Authorization',
+        'auth',
         'x-copilotkit-runtime-client-gql-version',
       ],
       exposedHeaders: [
         'reload',
         'onboarding',
         'activate',
+        'auth',
+        'showorg',
+        'impersonate',
         'x-copilotkit-runtime-client-gql-version',
-        ...(process.env.NOT_SECURED ? ['auth', 'showorg', 'impersonate'] : []),
       ],
       origin: [
         process.env.FRONTEND_URL,
