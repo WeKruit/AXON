@@ -12,6 +12,7 @@ import { VideoModule } from '@gitroom/nestjs-libraries/videos/video.module';
 import { SentryModule } from '@sentry/nestjs/setup';
 import { FILTER } from '@gitroom/nestjs-libraries/sentry/sentry.exception';
 import { ChatModule } from '@gitroom/nestjs-libraries/chat/chat.module';
+import { FirestoreModule } from '@gitroom/nestjs-libraries/database/firestore/firestore.module';
 
 // Static imports for Temporal modules - all are imported but only used based on SKIP_TEMPORAL
 import { MockTemporalModule } from './temporal/temporal.mock.module';
@@ -39,6 +40,7 @@ if (process.env.SKIP_TEMPORAL === 'true') {
     // MockTemporalModule must come before DatabaseModule since services depend on TemporalService
     ...temporalModules,
     DatabaseModule,
+    FirestoreModule,
     ApiModule,
     PublicApiModule,
     AgentModule,
@@ -66,6 +68,7 @@ if (process.env.SKIP_TEMPORAL === 'true') {
   ],
   exports: [
     DatabaseModule,
+    FirestoreModule,
     ApiModule,
     PublicApiModule,
     AgentModule,
