@@ -31,6 +31,7 @@ import { AutopostController } from '@gitroom/backend/api/routes/autopost.control
 import { SetsController } from '@gitroom/backend/api/routes/sets.controller';
 import { ThirdPartyController } from '@gitroom/backend/api/routes/third-party.controller';
 import { MonitorController } from '@gitroom/backend/api/routes/monitor.controller';
+import { PersonasController } from '@gitroom/backend/api/routes/personas.controller';
 
 const authenticatedController = [
   UsersController,
@@ -47,6 +48,7 @@ const authenticatedController = [
   AutopostController,
   SetsController,
   ThirdPartyController,
+  PersonasController,
 ];
 @Module({
   imports: [UploadModule],
