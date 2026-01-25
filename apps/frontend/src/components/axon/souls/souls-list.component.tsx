@@ -12,7 +12,7 @@ import type { Soul, CreateSoulDto } from '../types';
 import { CreateSoulModal } from './create-soul-modal';
 
 export const SoulsListComponent: FC = () => {
-  const { data: souls, isLoading, mutate } = useSouls();
+  const { data: souls, isLoading, error, mutate } = useSouls();
   const { createSoul, deleteSoul } = useSoulMutations();
   const toaster = useToaster();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -52,7 +52,7 @@ export const SoulsListComponent: FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex-1 bg-newBgColorInner p-6">
+      <div className="flex-1 bg-newBgColorInner p-6" role="status" aria-label="Loading souls">
         <div className="flex items-center justify-between mb-6">
           <div className="h-8 w-32 bg-newBgLineColor rounded animate-pulse" />
           <div className="h-10 w-32 bg-newBgLineColor rounded animate-pulse" />
@@ -61,6 +61,28 @@ export const SoulsListComponent: FC = () => {
           {[...Array(6)].map((_, i) => (
             <div key={i} className="h-48 bg-newBgLineColor rounded-lg animate-pulse" />
           ))}
+        </div>
+        <span className="sr-only">Loading souls...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex-1 bg-newBgColorInner p-6">
+        <div
+          className="p-6 text-center rounded-lg border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800"
+          role="alert"
+          aria-live="assertive"
+        >
+          <p className="text-red-500 dark:text-red-400">Failed to load souls</p>
+          <button
+            onClick={() => mutate()}
+            className="mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            aria-label="Retry loading souls"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
@@ -77,7 +99,8 @@ export const SoulsListComponent: FC = () => {
         </div>
         <button
           onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-newPrimaryColor text-white rounded-lg hover:bg-newPrimaryColor/90 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-newPrimaryColor text-white rounded-lg hover:bg-newPrimaryColor/90 transition-colors focus:outline-none focus:ring-2 focus:ring-newPrimaryColor focus:ring-offset-2"
+          aria-label="Create a new soul"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -89,6 +112,7 @@ export const SoulsListComponent: FC = () => {
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
+            aria-hidden="true"
           >
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
@@ -203,7 +227,8 @@ const SoulCard: FC<SoulCardProps> = ({ soul, onDelete }) => {
             e.stopPropagation();
             onDelete();
           }}
-          className="opacity-0 group-hover:opacity-100 p-1.5 text-textItemBlur hover:text-red-500 transition-all"
+          className="opacity-0 group-hover:opacity-100 p-1.5 text-textItemBlur hover:text-red-500 transition-all focus:outline-none focus:ring-2 focus:ring-red-500 rounded"
+          aria-label={`Delete soul: ${soul.name}`}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -215,6 +240,7 @@ const SoulCard: FC<SoulCardProps> = ({ soul, onDelete }) => {
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
+            aria-hidden="true"
           >
             <polyline points="3 6 5 6 21 6" />
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
