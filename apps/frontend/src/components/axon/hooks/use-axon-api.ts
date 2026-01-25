@@ -131,56 +131,62 @@ export function useAccount(id: string | undefined, config?: SWRConfiguration) {
 
 export function useAccountMutations() {
   const fetch = useFetch();
+  const fetchRef = useRef(fetch);
+  fetchRef.current = fetch;
 
   const createAccount = useCallback(async (data: CreateAccountDto): Promise<Account> => {
-    const response = await fetch('/axon/accounts', {
+    const response = await fetchRef.current('/axon/accounts', {
       method: 'POST',
       body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error('Failed to create account');
     return response.json();
-  }, [fetch]);
+  }, []);
 
   const updateAccount = useCallback(async (id: string, data: UpdateAccountDto): Promise<Account> => {
-    const response = await fetch(`/axon/accounts/${id}`, {
+    const response = await fetchRef.current(`/axon/accounts/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error('Failed to update account');
     return response.json();
-  }, [fetch]);
+  }, []);
 
   const deleteAccount = useCallback(async (id: string): Promise<void> => {
-    const response = await fetch(`/axon/accounts/${id}`, {
+    const response = await fetchRef.current(`/axon/accounts/${id}`, {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Failed to delete account');
-  }, [fetch]);
+  }, []);
 
   return { createAccount, updateAccount, deleteAccount };
 }
 
 export function usePersonas(config?: SWRConfiguration) {
   const fetch = useFetch();
+  const fetchRef = useRef(fetch);
+  fetchRef.current = fetch;
 
   const fetcher = useCallback(async () => {
-    const response = await fetch('/axon/personas');
+    const response = await fetchRef.current('/axon/personas');
     if (!response.ok) throw new Error('Failed to fetch personas');
     return response.json() as Promise<Persona[]>;
-  }, [fetch]);
+  }, []);
 
   return useSWR<Persona[]>('/axon/personas', fetcher, { ...defaultSwrConfig, ...config });
 }
 
 export function usePersona(id: string | undefined, config?: SWRConfiguration) {
   const fetch = useFetch();
+  const fetchRef = useRef(fetch);
+  fetchRef.current = fetch;
 
   const fetcher = useCallback(async () => {
     if (!id) return null;
-    const response = await fetch(`/axon/personas/${id}`);
+    const response = await fetchRef.current(`/axon/personas/${id}`);
     if (!response.ok) throw new Error('Failed to fetch persona');
     return response.json() as Promise<Persona>;
-  }, [fetch, id]);
+  }, [id]);
 
   return useSWR<Persona | null>(
     id ? `/axon/personas/${id}` : null,
@@ -191,65 +197,71 @@ export function usePersona(id: string | undefined, config?: SWRConfiguration) {
 
 export function usePersonaMutations() {
   const fetch = useFetch();
+  const fetchRef = useRef(fetch);
+  fetchRef.current = fetch;
 
   const createPersona = useCallback(async (data: CreatePersonaDto): Promise<Persona> => {
-    const response = await fetch('/axon/personas', {
+    const response = await fetchRef.current('/axon/personas', {
       method: 'POST',
       body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error('Failed to create persona');
     return response.json();
-  }, [fetch]);
+  }, []);
 
   const updatePersona = useCallback(async (id: string, data: UpdatePersonaDto): Promise<Persona> => {
-    const response = await fetch(`/axon/personas/${id}`, {
+    const response = await fetchRef.current(`/axon/personas/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error('Failed to update persona');
     return response.json();
-  }, [fetch]);
+  }, []);
 
   const deletePersona = useCallback(async (id: string): Promise<void> => {
-    const response = await fetch(`/axon/personas/${id}`, {
+    const response = await fetchRef.current(`/axon/personas/${id}`, {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Failed to delete persona');
-  }, [fetch]);
+  }, []);
 
   const generatePersona = useCallback(async (data: GeneratePersonaDto): Promise<Persona> => {
-    const response = await fetch('/axon/personas/generate', {
+    const response = await fetchRef.current('/axon/personas/generate', {
       method: 'POST',
       body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error('Failed to generate persona');
     return response.json();
-  }, [fetch]);
+  }, []);
 
   return { createPersona, updatePersona, deletePersona, generatePersona };
 }
 
 export function useProxies(config?: SWRConfiguration) {
   const fetch = useFetch();
+  const fetchRef = useRef(fetch);
+  fetchRef.current = fetch;
 
   const fetcher = useCallback(async () => {
-    const response = await fetch('/axon/proxies');
+    const response = await fetchRef.current('/axon/proxies');
     if (!response.ok) throw new Error('Failed to fetch proxies');
     return response.json() as Promise<Proxy[]>;
-  }, [fetch]);
+  }, []);
 
   return useSWR<Proxy[]>('/axon/proxies', fetcher, { ...defaultSwrConfig, ...config });
 }
 
 export function useProxy(id: string | undefined, config?: SWRConfiguration) {
   const fetch = useFetch();
+  const fetchRef = useRef(fetch);
+  fetchRef.current = fetch;
 
   const fetcher = useCallback(async () => {
     if (!id) return null;
-    const response = await fetch(`/axon/proxies/${id}`);
+    const response = await fetchRef.current(`/axon/proxies/${id}`);
     if (!response.ok) throw new Error('Failed to fetch proxy');
     return response.json() as Promise<Proxy>;
-  }, [fetch, id]);
+  }, [id]);
 
   return useSWR<Proxy | null>(
     id ? `/axon/proxies/${id}` : null,
@@ -260,59 +272,63 @@ export function useProxy(id: string | undefined, config?: SWRConfiguration) {
 
 export function useProxyMutations() {
   const fetch = useFetch();
+  const fetchRef = useRef(fetch);
+  fetchRef.current = fetch;
 
   const createProxy = useCallback(async (data: CreateProxyDto): Promise<Proxy> => {
-    const response = await fetch('/axon/proxies', {
+    const response = await fetchRef.current('/axon/proxies', {
       method: 'POST',
       body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error('Failed to create proxy');
     return response.json();
-  }, [fetch]);
+  }, []);
 
   const updateProxy = useCallback(async (id: string, data: UpdateProxyDto): Promise<Proxy> => {
-    const response = await fetch(`/axon/proxies/${id}`, {
+    const response = await fetchRef.current(`/axon/proxies/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error('Failed to update proxy');
     return response.json();
-  }, [fetch]);
+  }, []);
 
   const deleteProxy = useCallback(async (id: string): Promise<void> => {
-    const response = await fetch(`/axon/proxies/${id}`, {
+    const response = await fetchRef.current(`/axon/proxies/${id}`, {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Failed to delete proxy');
-  }, [fetch]);
+  }, []);
 
   const testProxy = useCallback(async (id: string): Promise<{ success: boolean; latency?: number; error?: string }> => {
-    const response = await fetch(`/axon/proxies/${id}/test`, {
+    const response = await fetchRef.current(`/axon/proxies/${id}/test`, {
       method: 'POST',
     });
     if (!response.ok) throw new Error('Failed to test proxy');
     return response.json();
-  }, [fetch]);
+  }, []);
 
   const rotateProxy = useCallback(async (id: string): Promise<Proxy> => {
-    const response = await fetch(`/axon/proxies/${id}/rotate`, {
+    const response = await fetchRef.current(`/axon/proxies/${id}/rotate`, {
       method: 'POST',
     });
     if (!response.ok) throw new Error('Failed to rotate proxy');
     return response.json();
-  }, [fetch]);
+  }, []);
 
   return { createProxy, updateProxy, deleteProxy, testProxy, rotateProxy };
 }
 
 export function useAxonAnalytics(config?: SWRConfiguration) {
   const fetch = useFetch();
+  const fetchRef = useRef(fetch);
+  fetchRef.current = fetch;
 
   const fetcher = useCallback(async () => {
-    const response = await fetch('/axon/analytics');
+    const response = await fetchRef.current('/axon/analytics');
     if (!response.ok) throw new Error('Failed to fetch analytics');
     return response.json() as Promise<AxonAnalytics>;
-  }, [fetch]);
+  }, []);
 
   return useSWR<AxonAnalytics>('/axon/analytics', fetcher, { ...defaultSwrConfig, ...config });
 }
