@@ -1,11 +1,12 @@
-import { Metadata } from 'next';
-import { SoulsListComponent } from '@gitroom/frontend/components/axon/souls/souls-list.component';
+'use client';
 
-export const metadata: Metadata = {
-  title: 'Postiz - AXON Souls',
-  description: 'Manage your AXON Souls - identity containers',
-};
+import { SoulsListComponent } from '@gitroom/frontend/components/axon/souls/souls-list.component';
+import { AxonErrorBoundary } from '@gitroom/frontend/components/axon/ui/error-boundary';
 
 export default function SoulsPage() {
-  return <SoulsListComponent />;
+  return (
+    <AxonErrorBoundary>
+      <SoulsListComponent />
+    </AxonErrorBoundary>
+  );
 }

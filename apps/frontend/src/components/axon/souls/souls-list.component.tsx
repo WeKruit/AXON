@@ -1,18 +1,19 @@
 'use client';
 
-import { FC, useCallback, useState } from 'react';
+import { FC, useCallback, useState, memo } from 'react';
 import Link from 'next/link';
-import clsx from 'clsx';
 import { useSouls, useSoulMutations } from '../hooks';
 import { StatusBadge } from '../ui/status-badge';
 import { PlatformIcon } from '../ui/platform-icon';
+import { ErrorState } from '../ui/error-boundary';
+import { PlusIcon, TrashIcon, SoulIcon } from '../ui/icons';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { deleteDialog } from '@gitroom/react/helpers/delete.dialog';
 import type { Soul, CreateSoulDto } from '../types';
 import { CreateSoulModal } from './create-soul-modal';
 
 export const SoulsListComponent: FC = () => {
-  const { data: souls, isLoading, mutate } = useSouls();
+  const { data: souls, isLoading, error, mutate } = useSouls();
   const { createSoul, deleteSoul } = useSoulMutations();
   const toaster = useToaster();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -24,7 +25,8 @@ export const SoulsListComponent: FC = () => {
         await mutate();
         setIsCreateModalOpen(false);
         toaster.show('Soul created successfully', 'success');
-      } catch (error) {
+      } catch (err) {
+        console.error('Failed to create soul:', err);
         toaster.show('Failed to create soul', 'warning');
       }
     },
@@ -43,16 +45,29 @@ export const SoulsListComponent: FC = () => {
         await deleteSoul(soul.id);
         await mutate();
         toaster.show('Soul deleted successfully', 'success');
-      } catch (error) {
+      } catch (err) {
+        console.error('Failed to delete soul:', err);
         toaster.show('Failed to delete soul', 'warning');
       }
     },
     [deleteSoul, mutate, toaster]
   );
 
-  if (isLoading) {
+  if (error) {
     return (
       <div className="flex-1 bg-newBgColorInner p-6">
+        <ErrorState
+          title="Failed to load souls"
+          message="There was an error loading your souls. Please try again."
+          onRetry={() => mutate()}
+        />
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 bg-newBgColorInner p-6" aria-busy="true" aria-label="Loading souls">
         <div className="flex items-center justify-between mb-6">
           <div className="h-8 w-32 bg-newBgLineColor rounded animate-pulse" />
           <div className="h-10 w-32 bg-newBgLineColor rounded animate-pulse" />
@@ -78,21 +93,9 @@ export const SoulsListComponent: FC = () => {
         <button
           onClick={() => setIsCreateModalOpen(true)}
           className="flex items-center gap-2 px-4 py-2 bg-newPrimaryColor text-white rounded-lg hover:bg-newPrimaryColor/90 transition-colors"
+          aria-label="Create new soul"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
+          <PlusIcon size="md" />
           Create Soul
         </button>
       </div>
@@ -100,22 +103,7 @@ export const SoulsListComponent: FC = () => {
       {!souls || souls.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="w-16 h-16 rounded-full bg-newBgLineColor flex items-center justify-center mb-4">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="32"
-              height="32"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-textItemBlur"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <circle cx="12" cy="12" r="6" />
-              <circle cx="12" cy="12" r="2" />
-            </svg>
+            <SoulIcon size={32} className="text-textItemBlur" />
           </div>
           <h3 className="text-lg font-medium mb-2">No Souls Yet</h3>
           <p className="text-sm text-textItemBlur mb-4 max-w-md">
@@ -125,12 +113,17 @@ export const SoulsListComponent: FC = () => {
           <button
             onClick={() => setIsCreateModalOpen(true)}
             className="px-4 py-2 bg-newPrimaryColor text-white rounded-lg hover:bg-newPrimaryColor/90 transition-colors"
+            aria-label="Create your first soul"
           >
             Create Your First Soul
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+          role="list"
+          aria-label="Souls list"
+        >
           {souls.map((soul) => (
             <SoulCard key={soul.id} soul={soul} onDelete={() => handleDeleteSoul(soul)} />
           ))}
@@ -152,17 +145,22 @@ interface SoulCardProps {
   onDelete: () => void;
 }
 
-const SoulCard: FC<SoulCardProps> = ({ soul, onDelete }) => {
+const SoulCard: FC<SoulCardProps> = memo(({ soul, onDelete }) => {
   const uniquePlatforms = [...new Set(soul.accounts?.map((a) => a.platform) || [])];
 
   return (
     <Link
       href={`/axon/souls/${soul.id}`}
       className="group block bg-newBgLineColor rounded-lg p-4 hover:bg-newBgLineColor/80 transition-colors"
+      role="listitem"
+      aria-label={`Soul: ${soul.name}, Status: ${soul.status}, ${soul.accounts?.length || 0} accounts`}
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-semibold">
+          <div
+            className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-semibold"
+            aria-hidden="true"
+          >
             {soul.name.charAt(0).toUpperCase()}
           </div>
           <div>
@@ -187,7 +185,7 @@ const SoulCard: FC<SoulCardProps> = ({ soul, onDelete }) => {
             {soul.accounts?.length || 0} account{(soul.accounts?.length || 0) !== 1 ? 's' : ''}
           </span>
           {uniquePlatforms.length > 0 && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1" aria-label={`Platforms: ${uniquePlatforms.join(', ')}`}>
               {uniquePlatforms.slice(0, 4).map((platform) => (
                 <PlatformIcon key={platform} platform={platform} size="sm" />
               ))}
@@ -204,23 +202,13 @@ const SoulCard: FC<SoulCardProps> = ({ soul, onDelete }) => {
             onDelete();
           }}
           className="opacity-0 group-hover:opacity-100 p-1.5 text-textItemBlur hover:text-red-500 transition-all"
+          aria-label={`Delete soul: ${soul.name}`}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polyline points="3 6 5 6 21 6" />
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-          </svg>
+          <TrashIcon size="sm" />
         </button>
       </div>
     </Link>
   );
-};
+});
+
+SoulCard.displayName = 'SoulCard';

@@ -1,11 +1,12 @@
-import { Metadata } from 'next';
-import { PersonasListComponent } from '@gitroom/frontend/components/axon/personas/personas-list.component';
+'use client';
 
-export const metadata: Metadata = {
-  title: 'Postiz - AXON Personas',
-  description: 'Manage your AXON Personas - AI-generated content personalities',
-};
+import { PersonasListComponent } from '@gitroom/frontend/components/axon/personas/personas-list.component';
+import { AxonErrorBoundary } from '@gitroom/frontend/components/axon/ui/error-boundary';
 
 export default function PersonasPage() {
-  return <PersonasListComponent />;
+  return (
+    <AxonErrorBoundary>
+      <PersonasListComponent />
+    </AxonErrorBoundary>
+  );
 }

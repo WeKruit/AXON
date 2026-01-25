@@ -1,11 +1,12 @@
-import { Metadata } from 'next';
-import { ProxiesListComponent } from '@gitroom/frontend/components/axon/proxies/proxies-list.component';
+'use client';
 
-export const metadata: Metadata = {
-  title: 'Postiz - AXON Proxies',
-  description: 'Manage your AXON Proxy Pool - residential, datacenter, and mobile proxies',
-};
+import { ProxiesListComponent } from '@gitroom/frontend/components/axon/proxies/proxies-list.component';
+import { AxonErrorBoundary } from '@gitroom/frontend/components/axon/ui/error-boundary';
 
 export default function ProxiesPage() {
-  return <ProxiesListComponent />;
+  return (
+    <AxonErrorBoundary>
+      <ProxiesListComponent />
+    </AxonErrorBoundary>
+  );
 }

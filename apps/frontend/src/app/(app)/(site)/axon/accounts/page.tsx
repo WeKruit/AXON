@@ -1,11 +1,12 @@
-import { Metadata } from 'next';
-import { AccountsListComponent } from '@gitroom/frontend/components/axon/accounts/accounts-list.component';
+'use client';
 
-export const metadata: Metadata = {
-  title: 'Postiz - AXON Accounts',
-  description: 'Manage your AXON Accounts - platform accounts linked to Souls',
-};
+import { AccountsListComponent } from '@gitroom/frontend/components/axon/accounts/accounts-list.component';
+import { AxonErrorBoundary } from '@gitroom/frontend/components/axon/ui/error-boundary';
 
 export default function AccountsPage() {
-  return <AccountsListComponent />;
+  return (
+    <AxonErrorBoundary>
+      <AccountsListComponent />
+    </AxonErrorBoundary>
+  );
 }
