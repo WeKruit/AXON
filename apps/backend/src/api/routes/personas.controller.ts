@@ -13,6 +13,7 @@ import {
   Post,
   Put,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { GetOrgFromRequest } from '@gitroom/nestjs-libraries/user/org.from.request';
 import { GetUserFromRequest } from '@gitroom/nestjs-libraries/user/user.from.request';
@@ -33,8 +34,10 @@ export class PersonasController {
   constructor(private readonly personaService: PersonaService) {}
 
   @Post('/generate')
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 requests per minute
   @ApiOperation({ summary: 'Generate a new persona from keywords using AI' })
   @ApiResponse({ status: 201, description: 'Persona generated successfully' })
+  @ApiResponse({ status: 429, description: 'Too many requests' })
   async generatePersona(
     @GetOrgFromRequest() org: Organization,
     @GetUserFromRequest() user: User,
@@ -135,9 +138,11 @@ export class PersonasController {
   }
 
   @Post('/:id/regenerate')
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 requests per minute
   @ApiOperation({ summary: 'Regenerate a persona with AI' })
   @ApiResponse({ status: 200, description: 'Persona regenerated successfully' })
   @ApiResponse({ status: 404, description: 'Persona not found' })
+  @ApiResponse({ status: 429, description: 'Too many requests' })
   async regeneratePersona(
     @GetOrgFromRequest() org: Organization,
     @Param('id') id: string,
@@ -147,9 +152,11 @@ export class PersonasController {
   }
 
   @Post('/:id/adapt')
+  @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 requests per minute
   @ApiOperation({ summary: 'Adapt content to match persona voice' })
   @ApiResponse({ status: 200, description: 'Content adapted successfully' })
   @ApiResponse({ status: 404, description: 'Persona not found' })
+  @ApiResponse({ status: 429, description: 'Too many requests' })
   async adaptContent(
     @GetOrgFromRequest() org: Organization,
     @Param('id') id: string,
@@ -164,9 +171,11 @@ export class PersonasController {
   }
 
   @Post('/:id/generate-content')
+  @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 requests per minute
   @ApiOperation({ summary: 'Generate content using persona voice' })
   @ApiResponse({ status: 200, description: 'Content generated successfully' })
   @ApiResponse({ status: 404, description: 'Persona not found' })
+  @ApiResponse({ status: 429, description: 'Too many requests' })
   async generateContent(
     @GetOrgFromRequest() org: Organization,
     @Param('id') id: string,
