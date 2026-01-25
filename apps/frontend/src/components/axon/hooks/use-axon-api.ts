@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import useSWR, { SWRConfiguration } from 'swr';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import type {
@@ -30,25 +30,29 @@ const defaultSwrConfig: SWRConfiguration = {
 
 export function useSouls(config?: SWRConfiguration) {
   const fetch = useFetch();
+  const fetchRef = useRef(fetch);
+  fetchRef.current = fetch;
 
   const fetcher = useCallback(async () => {
-    const response = await fetch('/axon/souls');
+    const response = await fetchRef.current('/axon/souls');
     if (!response.ok) throw new Error('Failed to fetch souls');
     return response.json() as Promise<Soul[]>;
-  }, [fetch]);
+  }, []);
 
   return useSWR<Soul[]>('/axon/souls', fetcher, { ...defaultSwrConfig, ...config });
 }
 
 export function useSoul(id: string | undefined, config?: SWRConfiguration) {
   const fetch = useFetch();
+  const fetchRef = useRef(fetch);
+  fetchRef.current = fetch;
 
   const fetcher = useCallback(async () => {
     if (!id) return null;
-    const response = await fetch(`/axon/souls/${id}`);
+    const response = await fetchRef.current(`/axon/souls/${id}`);
     if (!response.ok) throw new Error('Failed to fetch soul');
     return response.json() as Promise<SoulWithStats>;
-  }, [fetch, id]);
+  }, [id]);
 
   return useSWR<SoulWithStats | null>(
     id ? `/axon/souls/${id}` : null,
@@ -59,44 +63,48 @@ export function useSoul(id: string | undefined, config?: SWRConfiguration) {
 
 export function useSoulMutations() {
   const fetch = useFetch();
+  const fetchRef = useRef(fetch);
+  fetchRef.current = fetch;
 
   const createSoul = useCallback(async (data: CreateSoulDto): Promise<Soul> => {
-    const response = await fetch('/axon/souls', {
+    const response = await fetchRef.current('/axon/souls', {
       method: 'POST',
       body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error('Failed to create soul');
     return response.json();
-  }, [fetch]);
+  }, []);
 
   const updateSoul = useCallback(async (id: string, data: UpdateSoulDto): Promise<Soul> => {
-    const response = await fetch(`/axon/souls/${id}`, {
+    const response = await fetchRef.current(`/axon/souls/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error('Failed to update soul');
     return response.json();
-  }, [fetch]);
+  }, []);
 
   const deleteSoul = useCallback(async (id: string): Promise<void> => {
-    const response = await fetch(`/axon/souls/${id}`, {
+    const response = await fetchRef.current(`/axon/souls/${id}`, {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Failed to delete soul');
-  }, [fetch]);
+  }, []);
 
   return { createSoul, updateSoul, deleteSoul };
 }
 
 export function useAccounts(soulId?: string, config?: SWRConfiguration) {
   const fetch = useFetch();
+  const fetchRef = useRef(fetch);
+  fetchRef.current = fetch;
 
   const fetcher = useCallback(async () => {
     const url = soulId ? `/axon/accounts?soulId=${soulId}` : '/axon/accounts';
-    const response = await fetch(url);
+    const response = await fetchRef.current(url);
     if (!response.ok) throw new Error('Failed to fetch accounts');
     return response.json() as Promise<Account[]>;
-  }, [fetch, soulId]);
+  }, [soulId]);
 
   const key = soulId ? `/axon/accounts?soulId=${soulId}` : '/axon/accounts';
   return useSWR<Account[]>(key, fetcher, { ...defaultSwrConfig, ...config });
@@ -104,13 +112,15 @@ export function useAccounts(soulId?: string, config?: SWRConfiguration) {
 
 export function useAccount(id: string | undefined, config?: SWRConfiguration) {
   const fetch = useFetch();
+  const fetchRef = useRef(fetch);
+  fetchRef.current = fetch;
 
   const fetcher = useCallback(async () => {
     if (!id) return null;
-    const response = await fetch(`/axon/accounts/${id}`);
+    const response = await fetchRef.current(`/axon/accounts/${id}`);
     if (!response.ok) throw new Error('Failed to fetch account');
     return response.json() as Promise<AccountWithStats>;
-  }, [fetch, id]);
+  }, [id]);
 
   return useSWR<AccountWithStats | null>(
     id ? `/axon/accounts/${id}` : null,
