@@ -37,6 +37,14 @@ async function start() {
         'auth',
         'x-copilotkit-runtime-client-gql-version',
       ],
+      // Auth headers are always exposed to support:
+      // 1. Custom 'auth' header for session token handling across subdomains
+      // 2. 'reload' header to signal frontend to refresh data after mutations
+      // 3. 'onboarding' header to trigger onboarding flows for new users
+      // 4. 'activate' header for account activation workflows
+      // 5. 'showorg' header for organization context switching
+      // 6. 'impersonate' header for admin impersonation features
+      // These headers must be exposed regardless of environment for consistent behavior
       exposedHeaders: [
         'reload',
         'onboarding',
