@@ -13,3 +13,5 @@ export {
   useProxyMutations,
   useAxonAnalytics,
 } from './use-axon-api';
+
+export { useDebounce, useDebouncedCallback } from './use-debounce';
