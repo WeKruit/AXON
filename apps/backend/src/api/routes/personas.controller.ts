@@ -14,6 +14,7 @@ import {
   Put,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { GetOrgFromRequest } from '@gitroom/nestjs-libraries/user/org.from.request';
 import { GetUserFromRequest } from '@gitroom/nestjs-libraries/user/user.from.request';
 import { Organization, User } from '@prisma/client';
@@ -33,8 +34,12 @@ export class PersonasController {
   constructor(private readonly personaService: PersonaService) {}
 
   @Post('/generate')
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 requests per minute for AI generation
   @ApiOperation({ summary: 'Generate a new persona from keywords using AI' })
   @ApiResponse({ status: 201, description: 'Persona generated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @ApiResponse({ status: 429, description: 'Rate limit exceeded' })
+  @ApiResponse({ status: 500, description: 'AI generation failed' })
   async generatePersona(
     @GetOrgFromRequest() org: Organization,
     @GetUserFromRequest() user: User,
@@ -50,6 +55,8 @@ export class PersonasController {
   @Post('/')
   @ApiOperation({ summary: 'Create a new persona manually' })
   @ApiResponse({ status: 201, description: 'Persona created successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   async createPersona(
     @GetOrgFromRequest() org: Organization,
     @GetUserFromRequest() user: User,
@@ -64,6 +71,7 @@ export class PersonasController {
   @Get('/')
   @ApiOperation({ summary: 'Get all personas for the organization' })
   @ApiResponse({ status: 200, description: 'List of personas' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   async getPersonas(@GetOrgFromRequest() org: Organization) {
     return { personas: await this.personaService.getByOrganization(org.id) };
   }
@@ -71,6 +79,7 @@ export class PersonasController {
   @Get('/active')
   @ApiOperation({ summary: 'Get active personas for the organization' })
   @ApiResponse({ status: 200, description: 'List of active personas' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   async getActivePersonas(@GetOrgFromRequest() org: Organization) {
     return {
       personas: await this.personaService.getActiveByOrganization(org.id),
@@ -81,6 +90,7 @@ export class PersonasController {
   @ApiOperation({ summary: 'Get a specific persona by ID' })
   @ApiResponse({ status: 200, description: 'Persona details' })
   @ApiResponse({ status: 404, description: 'Persona not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   async getPersona(
     @GetOrgFromRequest() org: Organization,
     @Param('id') id: string
@@ -91,7 +101,9 @@ export class PersonasController {
   @Put('/:id')
   @ApiOperation({ summary: 'Update a persona' })
   @ApiResponse({ status: 200, description: 'Persona updated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
   @ApiResponse({ status: 404, description: 'Persona not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   async updatePersona(
     @GetOrgFromRequest() org: Organization,
     @Param('id') id: string,
@@ -104,6 +116,7 @@ export class PersonasController {
   @ApiOperation({ summary: 'Delete a persona' })
   @ApiResponse({ status: 200, description: 'Persona deleted successfully' })
   @ApiResponse({ status: 404, description: 'Persona not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   async deletePersona(
     @GetOrgFromRequest() org: Organization,
     @Param('id') id: string
@@ -116,6 +129,7 @@ export class PersonasController {
   @ApiOperation({ summary: 'Deactivate a persona (soft delete)' })
   @ApiResponse({ status: 200, description: 'Persona deactivated successfully' })
   @ApiResponse({ status: 404, description: 'Persona not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   async deactivatePersona(
     @GetOrgFromRequest() org: Organization,
     @Param('id') id: string
@@ -127,6 +141,7 @@ export class PersonasController {
   @ApiOperation({ summary: 'Activate a deactivated persona' })
   @ApiResponse({ status: 200, description: 'Persona activated successfully' })
   @ApiResponse({ status: 404, description: 'Persona not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   async activatePersona(
     @GetOrgFromRequest() org: Organization,
     @Param('id') id: string
@@ -135,9 +150,12 @@ export class PersonasController {
   }
 
   @Post('/:id/regenerate')
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 requests per minute for AI generation
   @ApiOperation({ summary: 'Regenerate a persona with AI' })
   @ApiResponse({ status: 200, description: 'Persona regenerated successfully' })
   @ApiResponse({ status: 404, description: 'Persona not found' })
+  @ApiResponse({ status: 429, description: 'Rate limit exceeded' })
+  @ApiResponse({ status: 500, description: 'AI generation failed' })
   async regeneratePersona(
     @GetOrgFromRequest() org: Organization,
     @Param('id') id: string,
@@ -147,9 +165,13 @@ export class PersonasController {
   }
 
   @Post('/:id/adapt')
+  @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 requests per minute for content adaptation
   @ApiOperation({ summary: 'Adapt content to match persona voice' })
   @ApiResponse({ status: 200, description: 'Content adapted successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
   @ApiResponse({ status: 404, description: 'Persona not found' })
+  @ApiResponse({ status: 429, description: 'Rate limit exceeded' })
+  @ApiResponse({ status: 500, description: 'AI processing failed' })
   async adaptContent(
     @GetOrgFromRequest() org: Organization,
     @Param('id') id: string,
@@ -164,9 +186,13 @@ export class PersonasController {
   }
 
   @Post('/:id/generate-content')
+  @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 requests per minute for content generation
   @ApiOperation({ summary: 'Generate content using persona voice' })
   @ApiResponse({ status: 200, description: 'Content generated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
   @ApiResponse({ status: 404, description: 'Persona not found' })
+  @ApiResponse({ status: 429, description: 'Rate limit exceeded' })
+  @ApiResponse({ status: 500, description: 'AI generation failed' })
   async generateContent(
     @GetOrgFromRequest() org: Organization,
     @Param('id') id: string,

@@ -55,10 +55,14 @@ export class OpenAIProvider extends LLMAbstract {
   }
 
   isAvailable(): boolean {
+    // OpenAI keys can start with sk-proj- (project keys) or sk- (user keys)
+    // Only reject if it's the placeholder value from the existing codebase
+    const apiKey = this.config.apiKey;
     return Boolean(
-      this.config.apiKey &&
-        this.config.apiKey.length > 0 &&
-        !this.config.apiKey.startsWith('sk-proj-')
+      apiKey &&
+        apiKey.length > 10 &&
+        apiKey.startsWith('sk-') &&
+        apiKey !== 'sk-proj-' // Reject only the placeholder
     );
   }
 
