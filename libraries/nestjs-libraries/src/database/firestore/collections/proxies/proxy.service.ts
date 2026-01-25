@@ -7,11 +7,13 @@ import {
   ProxyListQueryDto,
   ProxyResponseDto,
   ProxyHealthCheckDto,
+  ProxyCredentials,
   ProxyStatus,
   ProxyPurpose,
   ProxyType,
   PROXY_PURPOSE_MATRIX,
 } from '@gitroom/nestjs-libraries/dtos/axon';
+import { AuthService } from '@gitroom/helpers/auth/auth.service';
 
 @Injectable()
 export class ProxyService {
@@ -37,7 +39,12 @@ export class ProxyService {
       }
     }
 
-    const proxy = await this.proxyRepository.create(organizationId, dto);
+    // Encrypt credentials before storing
+    const encryptedCredentials = this.encryptCredentials(dto.credentials);
+    const proxy = await this.proxyRepository.create(organizationId, {
+      ...dto,
+      credentials: encryptedCredentials,
+    });
     return this.toResponseDto(proxy);
   }
 
@@ -88,7 +95,13 @@ export class ProxyService {
       }
     }
 
-    await this.proxyRepository.update(organizationId, id, dto);
+    // Encrypt credentials if being updated
+    const updateData = { ...dto };
+    if (dto.credentials) {
+      updateData.credentials = this.encryptCredentials(dto.credentials);
+    }
+
+    await this.proxyRepository.update(organizationId, id, updateData);
     return this.findById(organizationId, id);
   }
 
@@ -162,6 +175,30 @@ export class ProxyService {
     return this.proxyRepository.countByStatus(organizationId, status);
   }
 
+  /**
+   * Get all counts in parallel to avoid N+1 query problem
+   */
+  async getAllCounts(organizationId: string): Promise<{
+    total: number;
+    byStatus: Record<ProxyStatus, number>;
+  }> {
+    const statusValues = Object.values(ProxyStatus);
+
+    // Execute all count queries in parallel
+    const [total, ...statusCounts] = await Promise.all([
+      this.proxyRepository.count(organizationId),
+      ...statusValues.map((status) => this.proxyRepository.countByStatus(organizationId, status)),
+    ]);
+
+    // Build status counts object
+    const byStatus = {} as Record<ProxyStatus, number>;
+    statusValues.forEach((status, index) => {
+      byStatus[status] = statusCounts[index];
+    });
+
+    return { total, byStatus };
+  }
+
   validateProxyPurposeMatrix(type: ProxyType, purpose: ProxyPurpose): boolean {
     const allowedTypes = PROXY_PURPOSE_MATRIX[purpose];
     return allowedTypes.includes(type);
@@ -169,6 +206,14 @@ export class ProxyService {
 
   getRecommendedProxyTypes(purpose: ProxyPurpose): ProxyType[] {
     return PROXY_PURPOSE_MATRIX[purpose];
+  }
+
+  private encryptCredentials(credentials: ProxyCredentials): ProxyCredentials {
+    const encrypted = { ...credentials };
+    if (encrypted.password) {
+      encrypted.password = AuthService.fixedEncryption(encrypted.password);
+    }
+    return encrypted;
   }
 
   private toResponseDto(proxy: Proxy): ProxyResponseDto {

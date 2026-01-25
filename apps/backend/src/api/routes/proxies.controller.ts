@@ -22,6 +22,7 @@ import {
   ProxyResponseDto,
   ProxyHealthCheckDto,
   AssignProxyDto,
+  UpdateProxyStatusDto,
   ProxyType,
   ProxyPurpose,
   ProxyStatus,
@@ -73,16 +74,11 @@ export class ProxiesController {
   async getCount(
     @GetOrgFromRequest() organization: Organization
   ): Promise<{ count: number; byStatus: Record<string, number> }> {
-    const count = await this.proxyService.getCount(organization.id);
-    const active = await this.proxyService.getCountByStatus(organization.id, ProxyStatus.ACTIVE);
-    const inactive = await this.proxyService.getCountByStatus(organization.id, ProxyStatus.INACTIVE);
-    const rateLimited = await this.proxyService.getCountByStatus(organization.id, ProxyStatus.RATE_LIMITED);
-    const banned = await this.proxyService.getCountByStatus(organization.id, ProxyStatus.BANNED);
-    const expired = await this.proxyService.getCountByStatus(organization.id, ProxyStatus.EXPIRED);
-
+    // Use optimized parallel query method to avoid N+1 problem
+    const counts = await this.proxyService.getAllCounts(organization.id);
     return {
-      count,
-      byStatus: { active, inactive, rateLimited, banned, expired },
+      count: counts.total,
+      byStatus: counts.byStatus,
     };
   }
 
@@ -138,9 +134,9 @@ export class ProxiesController {
   async updateStatus(
     @GetOrgFromRequest() organization: Organization,
     @Param('id') id: string,
-    @Body('status') status: ProxyStatus
+    @Body() dto: UpdateProxyStatusDto
   ): Promise<ProxyResponseDto> {
-    return this.proxyService.updateStatus(organization.id, id, status);
+    return this.proxyService.updateStatus(organization.id, id, dto.status);
   }
 
   @Post('/:id/assign')

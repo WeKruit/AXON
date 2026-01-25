@@ -269,6 +269,39 @@ export class AccountService {
     return this.accountRepository.countByPlatform(organizationId, platform);
   }
 
+  /**
+   * Get all counts in parallel to avoid N+1 query problem
+   */
+  async getAllCounts(organizationId: string): Promise<{
+    total: number;
+    byStatus: Record<AccountStatus, number>;
+    byPlatform: Record<Platform, number>;
+  }> {
+    const statusValues = Object.values(AccountStatus);
+    const platformValues = Object.values(Platform);
+
+    // Execute all count queries in parallel
+    const [total, ...statusAndPlatformCounts] = await Promise.all([
+      this.accountRepository.count(organizationId),
+      ...statusValues.map((status) => this.accountRepository.countByStatus(organizationId, status)),
+      ...platformValues.map((platform) => this.accountRepository.countByPlatform(organizationId, platform)),
+    ]);
+
+    // Build status counts object
+    const byStatus = {} as Record<AccountStatus, number>;
+    statusValues.forEach((status, index) => {
+      byStatus[status] = statusAndPlatformCounts[index];
+    });
+
+    // Build platform counts object
+    const byPlatform = {} as Record<Platform, number>;
+    platformValues.forEach((platform, index) => {
+      byPlatform[platform] = statusAndPlatformCounts[statusValues.length + index];
+    });
+
+    return { total, byStatus, byPlatform };
+  }
+
   private encryptCredentials(credentials: any): any {
     const encrypted = { ...credentials };
     if (encrypted.password) {
