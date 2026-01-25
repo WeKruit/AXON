@@ -159,30 +159,46 @@ export class DeepSeekProvider extends LLMAbstract {
       stream: true,
     };
 
-    const response = await fetch(`${this.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.config.apiKey}`,
-      },
-      body: JSON.stringify(request),
-    });
+    // Create abort controller for streaming timeout
+    const streamTimeout = this.config.timeout || 120000; // 2 minutes for streaming
+    const abortController = new AbortController();
+    const timeoutId = setTimeout(() => abortController.abort(), streamTimeout);
 
-    if (!response.ok) {
-      await this.handleError(response);
-    }
+    try {
+      const response = await fetch(`${this.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.config.apiKey}`,
+        },
+        body: JSON.stringify(request),
+        signal: abortController.signal,
+      });
 
-    const reader = response.body?.getReader();
-    if (!reader) {
-      throw new LLMError('No response body', this.identifier);
-    }
+      if (!response.ok) {
+        await this.handleError(response);
+      }
 
-    const decoder = new TextDecoder();
-    let buffer = '';
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new LLMError('No response body', this.identifier);
+      }
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let lastActivityTime = Date.now();
+      const idleTimeout = 30000; // 30 seconds idle timeout
+
+      while (true) {
+        // Check for idle timeout
+        if (Date.now() - lastActivityTime > idleTimeout) {
+          throw new LLMError('Stream idle timeout', this.identifier, 'TIMEOUT');
+        }
+
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        lastActivityTime = Date.now();
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
@@ -209,7 +225,10 @@ export class DeepSeekProvider extends LLMAbstract {
       }
     }
 
-    yield { content: '', done: true };
+      yield { content: '', done: true };
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   private async handleError(response: Response): Promise<never> {
