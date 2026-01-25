@@ -6,6 +6,7 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
+import { z } from 'zod';
 import { LLMFactory } from './llm.factory';
 import {
   LLMCompletionOptions,
@@ -13,6 +14,30 @@ import {
   LLMMessage,
   LLMProviderType,
 } from './llm.interface';
+
+/**
+ * Zod schema for validating LLM-generated persona responses
+ */
+const GeneratedPersonaSchema = z.object({
+  name: z.string().min(1).max(100),
+  bio: z.string().min(1).max(500),
+  personality: z.string().min(1).max(1000),
+  writingStyle: z.string().min(1).max(200),
+  tone: z.string().min(1).max(100),
+  interests: z.array(z.string()).min(1).max(20),
+  hashtags: z.array(z.string()).min(1).max(30),
+  samplePosts: z.array(z.string()).min(1).max(10),
+});
+
+/**
+ * Zod schema for validating content analysis responses
+ */
+const ContentAnalysisSchema = z.object({
+  sentiment: z.enum(['positive', 'negative', 'neutral']),
+  tone: z.string(),
+  topics: z.array(z.string()),
+  suggestions: z.array(z.string()),
+});
 
 export interface GenerateTextOptions {
   prompt: string;
@@ -47,6 +72,27 @@ export class LLMService {
   private readonly logger = new Logger(LLMService.name);
 
   constructor(private readonly llmFactory: LLMFactory) {}
+
+  /**
+   * Sanitize user input to prevent prompt injection attacks
+   * Removes potentially dangerous characters and limits length
+   */
+  private sanitizeInput(input: string | undefined): string {
+    if (!input) return '';
+    return input
+      .replace(/[<>{}[\]\\]/g, '') // Remove potentially dangerous chars
+      .replace(/\n+/g, ' ') // Normalize newlines
+      .trim()
+      .slice(0, 200); // Limit length
+  }
+
+  /**
+   * Sanitize an array of strings
+   */
+  private sanitizeInputArray(inputs: string[] | undefined): string[] {
+    if (!inputs || !Array.isArray(inputs)) return [];
+    return inputs.map((input) => this.sanitizeInput(input)).filter(Boolean);
+  }
 
   /**
    * Generate text using the default or specified provider
@@ -86,17 +132,25 @@ export class LLMService {
    * Generate a persona from keywords
    */
   async generatePersona(keywords: PersonaKeywords): Promise<GeneratedPersona> {
+    // Sanitize all inputs to prevent prompt injection
+    const sanitizedIndustry = this.sanitizeInput(keywords.industry);
+    const sanitizedRole = this.sanitizeInput(keywords.role);
+    const sanitizedPersonality = this.sanitizeInputArray(keywords.personality);
+    const sanitizedInterests = this.sanitizeInputArray(keywords.interests);
+    const sanitizedWritingStyle = this.sanitizeInput(keywords.writingStyle);
+    const sanitizedTone = this.sanitizeInput(keywords.tone);
+
     const systemPrompt = `You are an expert at creating social media personas for content creators.
 Generate a detailed persona based on the provided keywords.
 Respond with a valid JSON object only, no markdown or additional text.`;
 
     const userPrompt = `Create a social media persona with the following characteristics:
-${keywords.industry ? `- Industry: ${keywords.industry}` : ''}
-${keywords.role ? `- Role/Position: ${keywords.role}` : ''}
-${keywords.personality?.length ? `- Personality traits: ${keywords.personality.join(', ')}` : ''}
-${keywords.interests?.length ? `- Interests: ${keywords.interests.join(', ')}` : ''}
-${keywords.writingStyle ? `- Writing style: ${keywords.writingStyle}` : ''}
-${keywords.tone ? `- Tone: ${keywords.tone}` : ''}
+${sanitizedIndustry ? `- Industry: ${sanitizedIndustry}` : ''}
+${sanitizedRole ? `- Role/Position: ${sanitizedRole}` : ''}
+${sanitizedPersonality.length ? `- Personality traits: ${sanitizedPersonality.join(', ')}` : ''}
+${sanitizedInterests.length ? `- Interests: ${sanitizedInterests.join(', ')}` : ''}
+${sanitizedWritingStyle ? `- Writing style: ${sanitizedWritingStyle}` : ''}
+${sanitizedTone ? `- Tone: ${sanitizedTone}` : ''}
 
 Return a JSON object with:
 {
@@ -123,7 +177,22 @@ Return a JSON object with:
       if (!jsonMatch) {
         throw new Error('No JSON object found in response');
       }
-      return JSON.parse(jsonMatch[0]) as GeneratedPersona;
+
+      const parsed = JSON.parse(jsonMatch[0]);
+
+      // Validate the response using Zod schema
+      const validationResult = GeneratedPersonaSchema.safeParse(parsed);
+      if (!validationResult.success) {
+        this.logger.error(
+          'LLM response validation failed:',
+          validationResult.error.errors
+        );
+        throw new Error(
+          `Invalid LLM response format: ${validationResult.error.errors.map((e) => e.message).join(', ')}`
+        );
+      }
+
+      return validationResult.data;
     } catch (error) {
       this.logger.error('Failed to parse persona response:', error);
       throw new Error('Failed to generate valid persona');
@@ -231,7 +300,25 @@ Return a JSON object with:
       if (!jsonMatch) {
         throw new Error('No JSON object found in response');
       }
-      return JSON.parse(jsonMatch[0]);
+
+      const parsed = JSON.parse(jsonMatch[0]);
+
+      // Validate the response using Zod schema
+      const validationResult = ContentAnalysisSchema.safeParse(parsed);
+      if (!validationResult.success) {
+        this.logger.warn(
+          'Content analysis validation failed, using fallback:',
+          validationResult.error.errors
+        );
+        return {
+          sentiment: 'neutral',
+          tone: 'unknown',
+          topics: [],
+          suggestions: [],
+        };
+      }
+
+      return validationResult.data;
     } catch (error) {
       this.logger.error('Failed to parse analysis response:', error);
       return {
