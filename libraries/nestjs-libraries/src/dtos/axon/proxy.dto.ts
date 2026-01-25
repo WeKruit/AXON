@@ -399,6 +399,13 @@ export class AssignProxyDto {
   accountId: string;
 }
 
+// Update Proxy Status DTO
+export class UpdateProxyStatusDto {
+  @ApiProperty({ description: 'New proxy status', enum: ProxyStatus })
+  @IsEnum(ProxyStatus)
+  status: ProxyStatus;
+}
+
 // Proxy Health Check Response
 export class ProxyHealthCheckDto {
   @ApiProperty({ description: 'Is proxy healthy' })

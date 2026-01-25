@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { FirestoreService, FirestoreQueryOptions } from '../../firestore.service';
 import { Soul, CreateSoulDto, UpdateSoulDto, SoulListQueryDto } from '@gitroom/nestjs-libraries/dtos/axon';
 
@@ -91,7 +91,7 @@ export class SoulRepository {
   async update(organizationId: string, id: string, dto: UpdateSoulDto): Promise<void> {
     const existing = await this.findById(organizationId, id);
     if (!existing) {
-      throw new Error('Soul not found');
+      throw new NotFoundException('Soul not found');
     }
 
     const updateData: Partial<Soul> = {};
@@ -112,7 +112,7 @@ export class SoulRepository {
   async delete(organizationId: string, id: string): Promise<void> {
     const existing = await this.findById(organizationId, id);
     if (!existing) {
-      throw new Error('Soul not found');
+      throw new NotFoundException('Soul not found');
     }
     await this.firestore.softDelete(COLLECTION, id);
   }
@@ -120,7 +120,7 @@ export class SoulRepository {
   async addAccountId(organizationId: string, soulId: string, accountId: string): Promise<void> {
     const soul = await this.findById(organizationId, soulId);
     if (!soul) {
-      throw new Error('Soul not found');
+      throw new NotFoundException('Soul not found');
     }
 
     const accountIds = soul.accountIds || [];
@@ -133,7 +133,7 @@ export class SoulRepository {
   async removeAccountId(organizationId: string, soulId: string, accountId: string): Promise<void> {
     const soul = await this.findById(organizationId, soulId);
     if (!soul) {
-      throw new Error('Soul not found');
+      throw new NotFoundException('Soul not found');
     }
 
     const accountIds = (soul.accountIds || []).filter((id) => id !== accountId);

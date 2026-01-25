@@ -21,6 +21,8 @@ import {
   AccountResponseDto,
   BulkImportAccountDto,
   BulkImportResultDto,
+  UpdateAccountStatusDto,
+  AssignAccountProxyDto,
   Platform,
   AccountStatus,
 } from '@gitroom/nestjs-libraries/dtos/axon';
@@ -82,24 +84,12 @@ export class AccountsController {
     byStatus: Record<string, number>;
     byPlatform: Record<string, number>;
   }> {
-    const count = await this.accountService.getCount(organization.id);
-
-    // Get counts by status
-    const statusCounts: Record<string, number> = {};
-    for (const status of Object.values(AccountStatus)) {
-      statusCounts[status] = await this.accountService.getCountByStatus(organization.id, status);
-    }
-
-    // Get counts by platform
-    const platformCounts: Record<string, number> = {};
-    for (const platform of Object.values(Platform)) {
-      platformCounts[platform] = await this.accountService.getCountByPlatform(organization.id, platform);
-    }
-
+    // Use optimized parallel query method to avoid N+1 problem
+    const counts = await this.accountService.getAllCounts(organization.id);
     return {
-      count,
-      byStatus: statusCounts,
-      byPlatform: platformCounts,
+      count: counts.total,
+      byStatus: counts.byStatus,
+      byPlatform: counts.byPlatform,
     };
   }
 
@@ -148,9 +138,9 @@ export class AccountsController {
   async updateStatus(
     @GetOrgFromRequest() organization: Organization,
     @Param('id') id: string,
-    @Body('status') status: AccountStatus
+    @Body() dto: UpdateAccountStatusDto
   ): Promise<AccountResponseDto> {
-    return this.accountService.updateStatus(organization.id, id, status);
+    return this.accountService.updateStatus(organization.id, id, dto.status);
   }
 
   @Put('/:id/proxy')
@@ -161,9 +151,9 @@ export class AccountsController {
   async assignProxy(
     @GetOrgFromRequest() organization: Organization,
     @Param('id') id: string,
-    @Body('proxyId') proxyId: string | null
+    @Body() dto: AssignAccountProxyDto
   ): Promise<AccountResponseDto> {
-    return this.accountService.assignProxy(organization.id, id, proxyId);
+    return this.accountService.assignProxy(organization.id, id, dto.proxyId ?? null);
   }
 
   @Delete('/:id')

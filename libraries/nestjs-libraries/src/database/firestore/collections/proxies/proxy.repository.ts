@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { FirestoreService, FirestoreQueryOptions } from '../../firestore.service';
 import {
   Proxy,
@@ -10,10 +10,18 @@ import {
 } from '@gitroom/nestjs-libraries/dtos/axon';
 
 const COLLECTION = 'proxies';
+const DEFAULT_MAX_ACCOUNTS_PER_PROXY = 10;
 
 @Injectable()
 export class ProxyRepository {
-  constructor(private readonly firestore: FirestoreService) {}
+  private readonly maxAccountsPerProxy: number;
+
+  constructor(private readonly firestore: FirestoreService) {
+    this.maxAccountsPerProxy = parseInt(
+      process.env.MAX_ACCOUNTS_PER_PROXY || String(DEFAULT_MAX_ACCOUNTS_PER_PROXY),
+      10
+    );
+  }
 
   async create(organizationId: string, dto: CreateProxyDto): Promise<Proxy> {
     const data: Omit<Proxy, 'id' | 'createdAt' | 'updatedAt'> = {
@@ -118,15 +126,14 @@ export class ProxyRepository {
     return proxies.filter((proxy) => {
       const assignedCount = (proxy.assignedAccountIds || []).length;
       const hasExcludedAccount = excludeAccountId && proxy.assignedAccountIds?.includes(excludeAccountId);
-      // Arbitrary limit of 10 accounts per proxy - can be made configurable
-      return assignedCount < 10 && !hasExcludedAccount;
+      return assignedCount < this.maxAccountsPerProxy && !hasExcludedAccount;
     });
   }
 
   async update(organizationId: string, id: string, dto: UpdateProxyDto): Promise<void> {
     const existing = await this.findById(organizationId, id);
     if (!existing) {
-      throw new Error('Proxy not found');
+      throw new NotFoundException('Proxy not found');
     }
 
     const updateData: Partial<Proxy> = {};
@@ -148,7 +155,7 @@ export class ProxyRepository {
   async delete(organizationId: string, id: string): Promise<void> {
     const existing = await this.findById(organizationId, id);
     if (!existing) {
-      throw new Error('Proxy not found');
+      throw new NotFoundException('Proxy not found');
     }
     await this.firestore.softDelete(COLLECTION, id);
   }
@@ -156,7 +163,7 @@ export class ProxyRepository {
   async assignAccount(organizationId: string, proxyId: string, accountId: string): Promise<void> {
     const proxy = await this.findById(organizationId, proxyId);
     if (!proxy) {
-      throw new Error('Proxy not found');
+      throw new NotFoundException('Proxy not found');
     }
 
     const assignedAccountIds = proxy.assignedAccountIds || [];
@@ -169,7 +176,7 @@ export class ProxyRepository {
   async unassignAccount(organizationId: string, proxyId: string, accountId: string): Promise<void> {
     const proxy = await this.findById(organizationId, proxyId);
     if (!proxy) {
-      throw new Error('Proxy not found');
+      throw new NotFoundException('Proxy not found');
     }
 
     const assignedAccountIds = (proxy.assignedAccountIds || []).filter((id) => id !== accountId);
@@ -179,7 +186,7 @@ export class ProxyRepository {
   async updateStatus(organizationId: string, id: string, status: ProxyStatus): Promise<void> {
     const existing = await this.findById(organizationId, id);
     if (!existing) {
-      throw new Error('Proxy not found');
+      throw new NotFoundException('Proxy not found');
     }
     await this.firestore.update<Proxy>(COLLECTION, id, { status });
   }

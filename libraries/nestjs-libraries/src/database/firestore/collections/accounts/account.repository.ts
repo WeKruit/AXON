@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { FirestoreService, FirestoreQueryOptions } from '../../firestore.service';
 import {
   Account,
@@ -151,7 +151,7 @@ export class AccountRepository {
   async update(organizationId: string, id: string, dto: UpdateAccountDto): Promise<void> {
     const existing = await this.findById(organizationId, id);
     if (!existing) {
-      throw new Error('Account not found');
+      throw new NotFoundException('Account not found');
     }
 
     const updateData: Partial<Account> = {};
@@ -175,7 +175,7 @@ export class AccountRepository {
   async delete(organizationId: string, id: string): Promise<void> {
     const existing = await this.findById(organizationId, id);
     if (!existing) {
-      throw new Error('Account not found');
+      throw new NotFoundException('Account not found');
     }
     await this.firestore.softDelete(COLLECTION, id);
   }
@@ -183,7 +183,7 @@ export class AccountRepository {
   async updateStatus(organizationId: string, id: string, status: AccountStatus): Promise<void> {
     const existing = await this.findById(organizationId, id);
     if (!existing) {
-      throw new Error('Account not found');
+      throw new NotFoundException('Account not found');
     }
     await this.firestore.update<Account>(COLLECTION, id, { status });
   }
@@ -191,7 +191,7 @@ export class AccountRepository {
   async updateLastActivity(organizationId: string, id: string): Promise<void> {
     const existing = await this.findById(organizationId, id);
     if (!existing) {
-      throw new Error('Account not found');
+      throw new NotFoundException('Account not found');
     }
     await this.firestore.update<Account>(COLLECTION, id, { lastActivityAt: new Date() });
   }
@@ -199,7 +199,7 @@ export class AccountRepository {
   async assignProxy(organizationId: string, accountId: string, proxyId: string | null): Promise<void> {
     const existing = await this.findById(organizationId, accountId);
     if (!existing) {
-      throw new Error('Account not found');
+      throw new NotFoundException('Account not found');
     }
     await this.firestore.update<Account>(COLLECTION, accountId, { proxyId: proxyId || undefined });
   }

@@ -426,3 +426,18 @@ export class BulkImportResultDto {
   @ApiProperty({ description: 'IDs of created accounts', type: [String] })
   createdIds: string[];
 }
+
+// Update Status DTO
+export class UpdateAccountStatusDto {
+  @ApiProperty({ description: 'New account status', enum: AccountStatus })
+  @IsEnum(AccountStatus)
+  status: AccountStatus;
+}
+
+// Assign Proxy DTO
+export class AssignAccountProxyDto {
+  @ApiPropertyOptional({ description: 'Proxy ID to assign (null to unassign)' })
+  @IsUUID()
+  @IsOptional()
+  proxyId?: string | null;
+}
