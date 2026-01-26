@@ -105,10 +105,10 @@ export const Modal: FC<ModalProps> = ({
       />
       <div
         ref={modalRef}
-        className={`relative bg-newBgColorInner rounded-lg p-6 w-full ${maxWidthClasses[maxWidth]} mx-4 shadow-xl max-h-[90vh] overflow-y-auto`}
+        className={`relative bg-newBgColorInner text-newTextColor rounded-[24px] p-[32px] w-full ${maxWidthClasses[maxWidth]} mx-4 shadow-xl max-h-[90vh] overflow-y-auto`}
       >
-        <div className="flex items-center justify-between mb-6">
-          <h2 id="modal-title" className="text-xl font-semibold">
+        <div className="flex items-center justify-between mb-[24px]">
+          <h2 id="modal-title" className="text-[24px] font-semibold text-newTextColor">
             {title}
           </h2>
           <button

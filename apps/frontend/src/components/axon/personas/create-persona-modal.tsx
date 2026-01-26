@@ -74,9 +74,9 @@ export const CreatePersonaModal: FC<CreatePersonaModalProps> = ({ onClose, onSub
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-newBgColorInner rounded-lg p-6 w-full max-w-2xl mx-4 shadow-xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold">Create Persona</h2>
+      <div className="relative bg-newBgColorInner text-newTextColor rounded-[24px] p-[32px] w-full max-w-2xl mx-4 shadow-xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-[24px]">
+          <h2 className="text-[24px] font-semibold text-newTextColor">Create Persona</h2>
           <button
             onClick={onClose}
             className="p-1 text-textItemBlur hover:text-newTextColor transition-colors"
@@ -110,7 +110,7 @@ export const CreatePersonaModal: FC<CreatePersonaModalProps> = ({ onClose, onSub
                 <input
                   type="text"
                   {...register('name', { required: 'Name is required' })}
-                  className="w-full px-3 py-2 bg-newBgLineColor rounded-lg border border-transparent focus:border-newPrimaryColor focus:outline-none transition-colors"
+                  className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor placeholder-textItemBlur rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors"
                   placeholder="e.g., Tech Enthusiast"
                 />
                 {errors.name && (
@@ -122,7 +122,7 @@ export const CreatePersonaModal: FC<CreatePersonaModalProps> = ({ onClose, onSub
                 <input
                   type="text"
                   {...register('description')}
-                  className="w-full px-3 py-2 bg-newBgLineColor rounded-lg border border-transparent focus:border-newPrimaryColor focus:outline-none transition-colors"
+                  className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor placeholder-textItemBlur rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors"
                   placeholder="Brief description"
                 />
               </div>
@@ -139,7 +139,7 @@ export const CreatePersonaModal: FC<CreatePersonaModalProps> = ({ onClose, onSub
                 </label>
                 <select
                   {...register('tone', { required: 'Tone is required' })}
-                  className="w-full px-3 py-2 bg-newBgLineColor rounded-lg border border-transparent focus:border-newPrimaryColor focus:outline-none transition-colors"
+                  className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor placeholder-textItemBlur rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors"
                 >
                   {toneOptions.map((tone) => (
                     <option key={tone} value={tone}>
@@ -154,7 +154,7 @@ export const CreatePersonaModal: FC<CreatePersonaModalProps> = ({ onClose, onSub
                 </label>
                 <select
                   {...register('style', { required: 'Style is required' })}
-                  className="w-full px-3 py-2 bg-newBgLineColor rounded-lg border border-transparent focus:border-newPrimaryColor focus:outline-none transition-colors"
+                  className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor placeholder-textItemBlur rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors"
                 >
                   {styleOptions.map((style) => (
                     <option key={style} value={style}>
@@ -201,7 +201,7 @@ export const CreatePersonaModal: FC<CreatePersonaModalProps> = ({ onClose, onSub
               <input
                 type="text"
                 {...register('topicInput')}
-                className="flex-1 px-3 py-2 bg-newBgLineColor rounded-lg border border-transparent focus:border-newPrimaryColor focus:outline-none transition-colors"
+                className="flex-1 px-3 py-2 bg-newBgColorInner text-newTextColor placeholder-textItemBlur rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors"
                 placeholder="Add a topic and press Enter"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -226,7 +226,7 @@ export const CreatePersonaModal: FC<CreatePersonaModalProps> = ({ onClose, onSub
                 <input
                   type="text"
                   {...register('demographics.age')}
-                  className="w-full px-3 py-2 bg-newBgLineColor rounded-lg text-sm border border-transparent focus:border-newPrimaryColor focus:outline-none transition-colors"
+                  className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor placeholder-textItemBlur rounded-[8px] text-sm border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors"
                   placeholder="e.g., 25-35"
                 />
               </div>
@@ -235,7 +235,7 @@ export const CreatePersonaModal: FC<CreatePersonaModalProps> = ({ onClose, onSub
                 <input
                   type="text"
                   {...register('demographics.gender')}
-                  className="w-full px-3 py-2 bg-newBgLineColor rounded-lg text-sm border border-transparent focus:border-newPrimaryColor focus:outline-none transition-colors"
+                  className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor placeholder-textItemBlur rounded-[8px] text-sm border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors"
                   placeholder="Any"
                 />
               </div>
@@ -244,7 +244,7 @@ export const CreatePersonaModal: FC<CreatePersonaModalProps> = ({ onClose, onSub
                 <input
                   type="text"
                   {...register('demographics.location')}
-                  className="w-full px-3 py-2 bg-newBgLineColor rounded-lg text-sm border border-transparent focus:border-newPrimaryColor focus:outline-none transition-colors"
+                  className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor placeholder-textItemBlur rounded-[8px] text-sm border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors"
                   placeholder="e.g., US"
                 />
               </div>
@@ -253,7 +253,7 @@ export const CreatePersonaModal: FC<CreatePersonaModalProps> = ({ onClose, onSub
                 <input
                   type="text"
                   {...register('demographics.occupation')}
-                  className="w-full px-3 py-2 bg-newBgLineColor rounded-lg text-sm border border-transparent focus:border-newPrimaryColor focus:outline-none transition-colors"
+                  className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor placeholder-textItemBlur rounded-[8px] text-sm border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors"
                   placeholder="e.g., Developer"
                 />
               </div>
@@ -265,24 +265,24 @@ export const CreatePersonaModal: FC<CreatePersonaModalProps> = ({ onClose, onSub
             <h3 className="text-sm font-medium text-textItemBlur">Writing Guidelines</h3>
             <textarea
               {...register('writingGuidelines')}
-              className="w-full px-3 py-2 bg-newBgLineColor rounded-lg border border-transparent focus:border-newPrimaryColor focus:outline-none transition-colors resize-none"
+              className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor placeholder-textItemBlur rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors resize-none"
               placeholder="Any specific rules or guidelines for writing content..."
               rows={3}
             />
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 pt-[16px]">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 bg-newBgLineColor text-newTextColor rounded-lg hover:bg-newBgLineColor/80 transition-colors"
+              className="flex-1 px-[16px] py-[12px] bg-newBgLineColor text-newTextColor rounded-[8px] hover:bg-newBgLineColor/80 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 px-4 py-2 bg-newPrimaryColor text-white rounded-lg hover:bg-newPrimaryColor/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-[16px] py-[12px] bg-btnPrimary text-white rounded-[8px] hover:bg-btnPrimary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? 'Creating...' : 'Create Persona'}
             </button>

@@ -145,7 +145,7 @@ export const ProxiesListComponent: FC = () => {
         </div>
         <button
           onClick={() => setIsAddModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-newPrimaryColor text-white rounded-lg hover:bg-newPrimaryColor/90 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-btnPrimary text-white rounded-lg hover:bg-btnPrimary/90 transition-colors"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -214,7 +214,7 @@ export const ProxiesListComponent: FC = () => {
         <select
           value={filterType}
           onChange={(e) => setFilterType(e.target.value as ProxyType | 'all')}
-          className="px-3 py-2 bg-newBgLineColor rounded-lg border border-transparent focus:border-newPrimaryColor focus:outline-none text-sm"
+          className="px-3 py-2 bg-newBgColorInner text-newTextColor rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none text-sm"
         >
           <option value="all">All Types</option>
           <option value="residential">Residential</option>
@@ -225,7 +225,7 @@ export const ProxiesListComponent: FC = () => {
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value as ProxyStatus | 'all')}
-          className="px-3 py-2 bg-newBgLineColor rounded-lg border border-transparent focus:border-newPrimaryColor focus:outline-none text-sm"
+          className="px-3 py-2 bg-newBgColorInner text-newTextColor rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none text-sm"
         >
           <option value="all">All Statuses</option>
           <option value="active">Active</option>
@@ -243,7 +243,7 @@ export const ProxiesListComponent: FC = () => {
               <p className="mb-2">No proxies configured</p>
               <button
                 onClick={() => setIsAddModalOpen(true)}
-                className="text-newPrimaryColor hover:underline"
+                className="text-btnPrimary hover:underline"
               >
                 Add your first proxy
               </button>

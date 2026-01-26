@@ -113,7 +113,7 @@ export const SoulDashboardComponent: FC<SoulDashboardProps> = ({ soulId }) => {
           <select
             value={soul.status}
             onChange={(e) => handleStatusChange(e.target.value as SoulStatus)}
-            className="px-3 py-1.5 bg-newBgLineColor rounded-lg border border-transparent focus:border-newPrimaryColor focus:outline-none text-sm"
+            className="px-3 py-1.5 bg-newBgColorInner text-newTextColor rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none text-sm"
           >
             <option value="active">Set Active</option>
             <option value="inactive">Set Inactive</option>
@@ -145,7 +145,7 @@ export const SoulDashboardComponent: FC<SoulDashboardProps> = ({ soulId }) => {
               <h2 className="text-lg font-medium">Accounts</h2>
               <button
                 onClick={() => setIsAddAccountOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-newPrimaryColor text-white rounded-lg text-sm hover:bg-newPrimaryColor/90 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-btnPrimary text-white rounded-lg text-sm hover:bg-btnPrimary/90 transition-colors"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -176,7 +176,7 @@ export const SoulDashboardComponent: FC<SoulDashboardProps> = ({ soulId }) => {
                 <p className="mb-2">No accounts linked to this soul yet</p>
                 <button
                   onClick={() => setIsAddAccountOpen(true)}
-                  className="text-newPrimaryColor hover:underline"
+                  className="text-btnPrimary hover:underline"
                 >
                   Add your first account
                 </button>

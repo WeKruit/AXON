@@ -62,9 +62,9 @@ export const AddProxyModal: FC<AddProxyModalProps> = ({ onClose, onSubmit }) => 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-newBgColorInner rounded-lg p-6 w-full max-w-lg mx-4 shadow-xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold">Add Proxy</h2>
+      <div className="relative bg-newBgColorInner text-newTextColor rounded-[24px] p-[32px] w-full max-w-lg mx-4 shadow-xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-[24px]">
+          <h2 className="text-[24px] font-semibold text-newTextColor">Add Proxy</h2>
           <button
             onClick={onClose}
             className="p-1 text-textItemBlur hover:text-newTextColor transition-colors"
@@ -95,7 +95,7 @@ export const AddProxyModal: FC<AddProxyModalProps> = ({ onClose, onSubmit }) => 
             <input
               type="text"
               {...register('name', { required: 'Name is required' })}
-              className="w-full px-3 py-2 bg-newBgLineColor rounded-lg border border-transparent focus:border-newPrimaryColor focus:outline-none transition-colors"
+              className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor placeholder-textItemBlur rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors"
               placeholder="e.g., US Residential #1"
             />
             {errors.name && (
@@ -140,7 +140,7 @@ export const AddProxyModal: FC<AddProxyModalProps> = ({ onClose, onSubmit }) => 
                 <input
                   type="text"
                   {...register('host', { required: 'Host is required' })}
-                  className="w-full px-3 py-2 bg-newBgLineColor rounded-lg text-sm border border-transparent focus:border-newPrimaryColor focus:outline-none transition-colors"
+                  className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor placeholder-textItemBlur rounded-[8px] text-sm border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors"
                   placeholder="proxy.example.com"
                 />
               </div>
@@ -156,7 +156,7 @@ export const AddProxyModal: FC<AddProxyModalProps> = ({ onClose, onSubmit }) => 
                     min: 1,
                     max: 65535,
                   })}
-                  className="w-full px-3 py-2 bg-newBgLineColor rounded-lg text-sm border border-transparent focus:border-newPrimaryColor focus:outline-none transition-colors"
+                  className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor placeholder-textItemBlur rounded-[8px] text-sm border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors"
                   placeholder="8080"
                 />
               </div>
@@ -167,7 +167,7 @@ export const AddProxyModal: FC<AddProxyModalProps> = ({ onClose, onSubmit }) => 
                 <input
                   type="text"
                   {...register('username')}
-                  className="w-full px-3 py-2 bg-newBgLineColor rounded-lg text-sm border border-transparent focus:border-newPrimaryColor focus:outline-none transition-colors"
+                  className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor placeholder-textItemBlur rounded-[8px] text-sm border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors"
                   placeholder="Optional"
                 />
               </div>
@@ -176,7 +176,7 @@ export const AddProxyModal: FC<AddProxyModalProps> = ({ onClose, onSubmit }) => 
                 <input
                   type="password"
                   {...register('password')}
-                  className="w-full px-3 py-2 bg-newBgLineColor rounded-lg text-sm border border-transparent focus:border-newPrimaryColor focus:outline-none transition-colors"
+                  className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor placeholder-textItemBlur rounded-[8px] text-sm border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors"
                   placeholder="Optional"
                 />
               </div>
@@ -192,7 +192,7 @@ export const AddProxyModal: FC<AddProxyModalProps> = ({ onClose, onSubmit }) => 
                 <input
                   type="text"
                   {...register('country')}
-                  className="w-full px-3 py-2 bg-newBgLineColor rounded-lg text-sm border border-transparent focus:border-newPrimaryColor focus:outline-none transition-colors"
+                  className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor placeholder-textItemBlur rounded-[8px] text-sm border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors"
                   placeholder="e.g., US"
                 />
               </div>
@@ -201,7 +201,7 @@ export const AddProxyModal: FC<AddProxyModalProps> = ({ onClose, onSubmit }) => 
                 <input
                   type="text"
                   {...register('city')}
-                  className="w-full px-3 py-2 bg-newBgLineColor rounded-lg text-sm border border-transparent focus:border-newPrimaryColor focus:outline-none transition-colors"
+                  className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor placeholder-textItemBlur rounded-[8px] text-sm border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors"
                   placeholder="e.g., New York"
                 />
               </div>
@@ -210,7 +210,7 @@ export const AddProxyModal: FC<AddProxyModalProps> = ({ onClose, onSubmit }) => 
                 <input
                   type="text"
                   {...register('isp')}
-                  className="w-full px-3 py-2 bg-newBgLineColor rounded-lg text-sm border border-transparent focus:border-newPrimaryColor focus:outline-none transition-colors"
+                  className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor placeholder-textItemBlur rounded-[8px] text-sm border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors"
                   placeholder="e.g., Comcast"
                 />
               </div>
@@ -223,7 +223,7 @@ export const AddProxyModal: FC<AddProxyModalProps> = ({ onClose, onSubmit }) => 
             <input
               type="number"
               {...register('rotationInterval', { valueAsNumber: true })}
-              className="w-full px-3 py-2 bg-newBgLineColor rounded-lg border border-transparent focus:border-newPrimaryColor focus:outline-none transition-colors"
+              className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor placeholder-textItemBlur rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors"
               placeholder="Leave empty for no rotation"
             />
             <p className="text-xs text-textItemBlur mt-1">
@@ -231,18 +231,18 @@ export const AddProxyModal: FC<AddProxyModalProps> = ({ onClose, onSubmit }) => 
             </p>
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 pt-[16px]">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 bg-newBgLineColor text-newTextColor rounded-lg hover:bg-newBgLineColor/80 transition-colors"
+              className="flex-1 px-[16px] py-[12px] bg-newBgLineColor text-newTextColor rounded-[8px] hover:bg-newBgLineColor/80 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 px-4 py-2 bg-newPrimaryColor text-white rounded-lg hover:bg-newPrimaryColor/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-[16px] py-[12px] bg-btnPrimary text-white rounded-[8px] hover:bg-btnPrimary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? 'Adding...' : 'Add Proxy'}
             </button>

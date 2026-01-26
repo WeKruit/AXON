@@ -64,8 +64,8 @@ export const GeneratePersonaModal: FC<GeneratePersonaModalProps> = ({ onClose, o
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-newBgColorInner rounded-lg p-6 w-full max-w-lg mx-4 shadow-xl">
-        <div className="flex items-center justify-between mb-6">
+      <div className="relative bg-newBgColorInner text-newTextColor rounded-[24px] p-[32px] w-full max-w-lg mx-4 shadow-xl">
+        <div className="flex items-center justify-between mb-[24px]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
               <svg
@@ -85,8 +85,8 @@ export const GeneratePersonaModal: FC<GeneratePersonaModalProps> = ({ onClose, o
               </svg>
             </div>
             <div>
-              <h2 className="text-xl font-semibold">Generate Persona with AI</h2>
-              <p className="text-xs text-textItemBlur">Describe your ideal content creator</p>
+              <h2 className="text-[24px] font-semibold text-newTextColor">Generate Persona with AI</h2>
+              <p className="text-[12px] text-textItemBlur">Describe your ideal content creator</p>
             </div>
           </div>
           <button
@@ -118,7 +118,7 @@ export const GeneratePersonaModal: FC<GeneratePersonaModalProps> = ({ onClose, o
             </label>
             <textarea
               {...register('prompt', { required: 'Please describe the persona you want to create' })}
-              className="w-full px-3 py-2 bg-newBgLineColor rounded-lg border border-transparent focus:border-newPrimaryColor focus:outline-none transition-colors resize-none"
+              className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor placeholder-textItemBlur rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors resize-none"
               placeholder="e.g., A tech-savvy entrepreneur who shares insights about startups, AI, and productivity. They're known for their practical advice and occasional witty observations."
               rows={4}
             />
@@ -136,7 +136,7 @@ export const GeneratePersonaModal: FC<GeneratePersonaModalProps> = ({ onClose, o
             <input
               type="text"
               {...register('targetAudience')}
-              className="w-full px-3 py-2 bg-newBgLineColor rounded-lg border border-transparent focus:border-newPrimaryColor focus:outline-none transition-colors"
+              className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor placeholder-textItemBlur rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors"
               placeholder="e.g., Software developers, startup founders, tech enthusiasts"
             />
           </div>
@@ -147,7 +147,7 @@ export const GeneratePersonaModal: FC<GeneratePersonaModalProps> = ({ onClose, o
               <label className="block text-sm font-medium mb-1.5">Industry</label>
               <select
                 {...register('industry')}
-                className="w-full px-3 py-2 bg-newBgLineColor rounded-lg border border-transparent focus:border-newPrimaryColor focus:outline-none transition-colors"
+                className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor placeholder-textItemBlur rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors"
               >
                 <option value="">Select industry</option>
                 {industryOptions.map((industry) => (
@@ -161,7 +161,7 @@ export const GeneratePersonaModal: FC<GeneratePersonaModalProps> = ({ onClose, o
               <label className="block text-sm font-medium mb-1.5">Preferred Tone</label>
               <select
                 {...register('tone')}
-                className="w-full px-3 py-2 bg-newBgLineColor rounded-lg border border-transparent focus:border-newPrimaryColor focus:outline-none transition-colors"
+                className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor placeholder-textItemBlur rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors"
               >
                 <option value="">AI will decide</option>
                 {toneOptions.map((tone) => (
@@ -197,11 +197,11 @@ export const GeneratePersonaModal: FC<GeneratePersonaModalProps> = ({ onClose, o
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 pt-[16px]">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 bg-newBgLineColor text-newTextColor rounded-lg hover:bg-newBgLineColor/80 transition-colors"
+              className="flex-1 px-[16px] py-[12px] bg-newBgLineColor text-newTextColor rounded-[8px] hover:bg-newBgLineColor/80 transition-colors"
             >
               Cancel
             </button>
