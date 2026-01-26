@@ -29,3 +29,7 @@ export { GeneratePersonaModal } from './personas/generate-persona-modal';
 // Proxy Components
 export { ProxiesListComponent } from './proxies/proxies-list.component';
 export { AddProxyModal } from './proxies/add-proxy-modal';
+
+// Matrix Components
+export { MatrixViewComponent, MatrixGridComponent } from './matrix';
+export { useMatrix, useMatrixMutations, useSoulIntegrations } from './matrix';

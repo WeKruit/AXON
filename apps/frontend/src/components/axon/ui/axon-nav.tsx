@@ -18,6 +18,11 @@ const navItems: NavItem[] = [
     description: 'Identity containers',
   },
   {
+    label: 'Matrix',
+    href: '/axon/matrix',
+    description: 'Soul-Channel mapping',
+  },
+  {
     label: 'Accounts',
     href: '/axon/accounts',
     description: 'Social accounts',
