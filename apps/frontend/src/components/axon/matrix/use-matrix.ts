@@ -1,9 +1,10 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
-import useSWR, { SWRConfiguration, mutate as globalMutate } from 'swr';
+import useSWR, { SWRConfiguration, mutate as globalMutate, preload } from 'swr';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useSouls } from '../hooks/use-axon-api';
+import { defaultSwrConfig, AXON_CACHE_KEYS } from '@/lib/swr-config';
 import type {
   Integration,
   SoulIntegrationMapping,
@@ -16,12 +17,6 @@ import type {
   buildCellMap,
   getCellKey,
 } from './types';
-
-const defaultSwrConfig: SWRConfiguration = {
-  revalidateOnFocus: false,
-  revalidateOnReconnect: false,
-  revalidateIfStale: false,
-};
 
 /**
  * Hook to fetch all integrations (channels) for the organization
