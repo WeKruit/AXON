@@ -35,6 +35,7 @@ import { PersonasController } from '@gitroom/backend/api/routes/personas.control
 import { SoulsController } from '@gitroom/backend/api/routes/souls.controller';
 import { AccountsController } from '@gitroom/backend/api/routes/accounts.controller';
 import { ProxiesController } from '@gitroom/backend/api/routes/proxies.controller';
+import { MatrixController } from '@gitroom/backend/api/routes/matrix.controller';
 
 const authenticatedController = [
   UsersController,
@@ -56,6 +57,7 @@ const authenticatedController = [
   SoulsController,
   AccountsController,
   ProxiesController,
+  MatrixController,
 ];
 @Module({
   imports: [UploadModule],
