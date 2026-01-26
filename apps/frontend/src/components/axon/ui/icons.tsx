@@ -328,3 +328,114 @@ export const FilterIcon: FC<IconProps> = ({ size = 'md', ...props }) => {
     </svg>
   );
 };
+
+export const GridIcon: FC<IconProps> = ({ size = 'md', ...props }) => {
+  const s = getSize(size);
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={s}
+      height={s}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <rect x="3" y="3" width="7" height="7" />
+      <rect x="14" y="3" width="7" height="7" />
+      <rect x="14" y="14" width="7" height="7" />
+      <rect x="3" y="14" width="7" height="7" />
+    </svg>
+  );
+};
+
+export const StarIcon: FC<IconProps> = ({ size = 'md', ...props }) => {
+  const s = getSize(size);
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={s}
+      height={s}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+};
+
+export const StarFilledIcon: FC<IconProps> = ({ size = 'md', ...props }) => {
+  const s = getSize(size);
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={s}
+      height={s}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+};
+
+export const LinkIcon: FC<IconProps> = ({ size = 'md', ...props }) => {
+  const s = getSize(size);
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={s}
+      height={s}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    </svg>
+  );
+};
+
+export const UnlinkIcon: FC<IconProps> = ({ size = 'md', ...props }) => {
+  const s = getSize(size);
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={s}
+      height={s}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M18.84 12.25l1.72-1.71a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M5.16 11.75l-1.72 1.71a5 5 0 0 0 7.07 7.07l1.72-1.71" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
+  );
+};
