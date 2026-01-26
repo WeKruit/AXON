@@ -4,7 +4,7 @@ import { useCallback, useMemo } from 'react';
 import useSWR, { SWRConfiguration, mutate as globalMutate, preload } from 'swr';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useSouls } from '../hooks/use-axon-api';
-import { defaultSwrConfig, AXON_CACHE_KEYS } from '@/lib/swr-config';
+import { defaultSwrConfig, AXON_CACHE_KEYS } from '../../../lib/swr-config';
 import type {
   Integration,
   SoulIntegrationMapping,

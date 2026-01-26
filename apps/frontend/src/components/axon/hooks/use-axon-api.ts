@@ -3,7 +3,7 @@
 import { useCallback, useMemo } from 'react';
 import useSWR, { SWRConfiguration, preload } from 'swr';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
-import { defaultSwrConfig, AXON_CACHE_KEYS } from '@/lib/swr-config';
+import { defaultSwrConfig, AXON_CACHE_KEYS } from '../../../lib/swr-config';
 import type {
   Soul,
   SoulWithStats,
