@@ -18,6 +18,8 @@ import {
   MatrixResponseDto,
   BulkOperationResultDto,
   BulkOperationType,
+  MatrixSoulDto,
+  MatrixIntegrationDto,
 } from '@gitroom/nestjs-libraries/dtos/axon';
 
 @Injectable()
@@ -28,26 +30,53 @@ export class MatrixService {
   ) {}
 
   /**
-   * Get the full matrix with optional filters and pagination
+   * Get the full matrix with souls, integrations, and mappings
    */
   async getMatrix(
     organizationId: string,
     filters: MatrixFiltersDto
   ): Promise<MatrixResponseDto> {
-    const { mappings, total } = await this.matrixRepository.findAll(
-      organizationId,
-      filters
-    );
+    // Fetch all data in parallel for efficiency
+    const [soulsResult, integrations, mappings] = await Promise.all([
+      this.soulRepository.findAll(organizationId, { limit: 1000 }),
+      this.matrixRepository.getAllIntegrations(organizationId),
+      this.matrixRepository.getAllMappings(organizationId),
+    ]);
 
-    const limit = filters.limit || 50;
-    const offset = filters.offset || 0;
+    // Build a map of soulId -> integrationIds from mappings
+    const soulIntegrationMap = new Map<string, string[]>();
+    for (const mapping of mappings) {
+      const existing = soulIntegrationMap.get(mapping.soulId) || [];
+      existing.push(mapping.integrationId);
+      soulIntegrationMap.set(mapping.soulId, existing);
+    }
+
+    // Transform souls to MatrixSoulDto
+    const souls: MatrixSoulDto[] = soulsResult.data.map((soul) => ({
+      id: soul.id,
+      name: soul.displayName || soul.email || `Soul ${soul.id.slice(0, 8)}`,
+      email: soul.email,
+      integrationIds: soulIntegrationMap.get(soul.id) || [],
+    }));
+
+    // Transform integrations to MatrixIntegrationDto
+    const matrixIntegrations: MatrixIntegrationDto[] = integrations.map((int) => ({
+      id: int.id,
+      name: int.name,
+      platform: int.providerIdentifier,
+      picture: int.picture ?? undefined,
+      disabled: int.disabled,
+    }));
 
     return {
+      souls,
+      integrations: matrixIntegrations,
       mappings: mappings.map((m) => this.toMappingResponseDto(m)),
-      total,
-      limit,
-      offset,
-      hasMore: offset + mappings.length < total,
+      stats: {
+        totalSouls: souls.length,
+        totalIntegrations: integrations.length,
+        totalMappings: mappings.length,
+      },
     };
   }
 
