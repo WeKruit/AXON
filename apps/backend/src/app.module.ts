@@ -12,7 +12,9 @@ import { VideoModule } from '@gitroom/nestjs-libraries/videos/video.module';
 import { SentryModule } from '@sentry/nestjs/setup';
 import { FILTER } from '@gitroom/nestjs-libraries/sentry/sentry.exception';
 import { ChatModule } from '@gitroom/nestjs-libraries/chat/chat.module';
-import { FirestoreModule } from '@gitroom/nestjs-libraries/database/firestore/firestore.module';
+import { LLMModule } from '@gitroom/nestjs-libraries/llm/llm.module';
+import { FirebaseModule } from '@gitroom/nestjs-libraries/firebase/firebase.module';
+import { PersonaModule } from '@gitroom/nestjs-libraries/persona/persona.module';
 
 // Static imports for Temporal modules - all are imported but only used based on SKIP_TEMPORAL
 import { MockTemporalModule } from './temporal/temporal.mock.module';
@@ -47,6 +49,9 @@ if (process.env.SKIP_TEMPORAL === 'true') {
     ThirdPartyModule,
     VideoModule,
     ChatModule,
+    LLMModule,
+    FirebaseModule,
+    PersonaModule,
     ThrottlerModule.forRoot([
       {
         ttl: 3600000,
@@ -74,6 +79,9 @@ if (process.env.SKIP_TEMPORAL === 'true') {
     AgentModule,
     ThrottlerModule,
     ChatModule,
+    LLMModule,
+    FirebaseModule,
+    PersonaModule,
   ],
 })
 export class AppModule {}
