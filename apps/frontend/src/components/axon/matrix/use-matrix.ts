@@ -1,10 +1,9 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
-import useSWR, { SWRConfiguration, mutate as globalMutate, preload } from 'swr';
+import useSWR, { SWRConfiguration, mutate as globalMutate } from 'swr';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useSouls } from '../hooks/use-axon-api';
-import { defaultSwrConfig, AXON_CACHE_KEYS } from '../../../lib/swr-config';
 import type {
   Integration,
   SoulIntegrationMapping,
@@ -17,6 +16,13 @@ import type {
   buildCellMap,
   getCellKey,
 } from './types';
+
+const defaultSwrConfig: SWRConfiguration = {
+  revalidateOnFocus: false,
+  revalidateOnReconnect: false,
+  revalidateIfStale: false,
+  dedupingInterval: 5000, // Dedupe identical requests within 5 seconds
+};
 
 /**
  * Hook to fetch all integrations (channels) for the organization
@@ -35,50 +41,97 @@ export function useIntegrations(config?: SWRConfiguration) {
 }
 
 /**
- * Hook to fetch soul-integration mappings
+ * Hook to fetch soul-integration mappings from the full matrix endpoint
  */
 export function useSoulIntegrationMappings(config?: SWRConfiguration) {
   const fetch = useFetch();
 
   const fetcher = useCallback(async () => {
-    const response = await fetch('/axon/matrix/mappings');
+    const response = await fetch('/axon/matrix');
     if (!response.ok) throw new Error('Failed to fetch mappings');
     const result = await response.json();
-    return (result?.data ?? result ?? []) as SoulIntegrationMapping[];
+    // The matrix endpoint returns { souls, integrations, mappings, stats }
+    return (result?.mappings ?? []) as SoulIntegrationMapping[];
   }, [fetch]);
 
-  return useSWR<SoulIntegrationMapping[]>('/axon/matrix/mappings', fetcher, { ...defaultSwrConfig, ...config });
+  return useSWR<SoulIntegrationMapping[]>('/axon/matrix/mappings-data', fetcher, { ...defaultSwrConfig, ...config });
 }
 
 /**
- * Main hook for the matrix view - combines souls, integrations, and mappings
+ * Full matrix response from backend
+ */
+interface MatrixApiResponse {
+  souls: Array<{
+    id: string;
+    name: string;
+    email?: string;
+    integrationIds: string[];
+  }>;
+  integrations: Array<{
+    id: string;
+    name: string;
+    platform: string;
+    picture?: string;
+    disabled: boolean;
+  }>;
+  mappings: SoulIntegrationMapping[];
+  stats: {
+    totalSouls: number;
+    totalIntegrations: number;
+    totalMappings: number;
+  };
+}
+
+/**
+ * Main hook for the matrix view - fetches all data in ONE API call for better performance
  */
 export function useMatrix(config?: SWRConfiguration) {
-  const { data: souls, isLoading: soulsLoading, error: soulsError, mutate: mutateSouls } = useSouls(config);
-  const { data: integrations, isLoading: integrationsLoading, error: integrationsError, mutate: mutateIntegrations } = useIntegrations(config);
-  const { data: mappings, isLoading: mappingsLoading, error: mappingsError, mutate: mutateMappings } = useSoulIntegrationMappings(config);
+  const fetch = useFetch();
 
-  const isLoading = soulsLoading || integrationsLoading || mappingsLoading;
-  const error = soulsError || integrationsError || mappingsError;
+  const fetcher = useCallback(async (): Promise<MatrixData | null> => {
+    const response = await fetch('/axon/matrix');
+    if (!response.ok) throw new Error('Failed to fetch matrix');
+    const result: MatrixApiResponse = await response.json();
 
-  const matrixData: MatrixData | null = useMemo(() => {
-    if (!souls || !integrations || !mappings) return null;
+    // Transform the backend response to our frontend types
+    const souls = result.souls.map((s) => ({
+      id: s.id,
+      name: s.name,
+      email: s.email,
+      organizationId: '', // Will be set by context
+    })) as any[];
+
+    const integrations = result.integrations.map((i) => ({
+      id: i.id,
+      identifier: i.name,
+      name: i.name,
+      picture: i.picture,
+      type: i.platform,
+      providerIdentifier: i.platform,
+      disabled: i.disabled,
+      organizationId: '',
+      createdAt: '',
+      updatedAt: '',
+    })) as Integration[];
+
     return {
       souls,
       integrations,
-      mappings,
+      mappings: result.mappings,
     };
-  }, [souls, integrations, mappings]);
+  }, [fetch]);
 
-  const mutate = useCallback(async () => {
-    await Promise.all([mutateSouls(), mutateIntegrations(), mutateMappings()]);
-  }, [mutateSouls, mutateIntegrations, mutateMappings]);
+  const { data, isLoading, error, mutate } = useSWR<MatrixData | null>(
+    '/axon/matrix-full',
+    fetcher,
+    { ...defaultSwrConfig, ...config }
+  );
 
   return {
-    data: matrixData,
-    souls,
-    integrations,
-    mappings,
+    data,
+    souls: data?.souls ?? [],
+    integrations: data?.integrations ?? [],
+    mappings: data?.mappings ?? [],
     isLoading,
     error,
     mutate,
@@ -132,8 +185,8 @@ export function useMatrixMutations() {
     return response.json();
   }, [fetch]);
 
-  const deleteMapping = useCallback(async (soulId: string, integrationId: string): Promise<void> => {
-    const response = await fetch(`/axon/matrix/mappings/${soulId}/${integrationId}`, {
+  const deleteMapping = useCallback(async (mappingId: string): Promise<void> => {
+    const response = await fetch(`/axon/matrix/mappings/${mappingId}`, {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Failed to delete mapping');
@@ -150,10 +203,9 @@ export function useMatrixMutations() {
     return result.mapping ?? null;
   }, [fetch]);
 
-  const setPrimary = useCallback(async (input: SetPrimaryInput): Promise<SoulIntegrationMapping> => {
-    const response = await fetch('/axon/matrix/mappings/primary', {
+  const setPrimary = useCallback(async (mappingId: string): Promise<SoulIntegrationMapping> => {
+    const response = await fetch(`/axon/matrix/mappings/${mappingId}/primary`, {
       method: 'POST',
-      body: JSON.stringify(input),
     });
     if (!response.ok) throw new Error('Failed to set primary');
     return response.json();
@@ -179,14 +231,14 @@ export function useSoulIntegrations(soulId: string | undefined, config?: SWRConf
 
   const fetcher = useCallback(async () => {
     if (!soulId) return [];
-    const response = await fetch(`/axon/souls/${soulId}/integrations`);
+    const response = await fetch(`/axon/matrix/souls/${soulId}/integrations`);
     if (!response.ok) throw new Error('Failed to fetch soul integrations');
     const result = await response.json();
-    return (result?.data ?? result ?? []) as Integration[];
+    return (result?.mappings ?? result?.data ?? result ?? []) as Integration[];
   }, [fetch, soulId]);
 
   return useSWR<Integration[]>(
-    soulId ? `/axon/souls/${soulId}/integrations` : null,
+    soulId ? `/axon/matrix/souls/${soulId}/integrations` : null,
     fetcher,
     { ...defaultSwrConfig, ...config }
   );
@@ -200,14 +252,14 @@ export function useIntegrationSouls(integrationId: string | undefined, config?: 
 
   const fetcher = useCallback(async () => {
     if (!integrationId) return [];
-    const response = await fetch(`/axon/integrations/${integrationId}/souls`);
+    const response = await fetch(`/axon/matrix/integrations/${integrationId}/souls`);
     if (!response.ok) throw new Error('Failed to fetch integration souls');
     const result = await response.json();
-    return result?.data ?? result ?? [];
+    return result?.mappings ?? result?.data ?? result ?? [];
   }, [fetch, integrationId]);
 
   return useSWR(
-    integrationId ? `/axon/integrations/${integrationId}/souls` : null,
+    integrationId ? `/axon/matrix/integrations/${integrationId}/souls` : null,
     fetcher,
     { ...defaultSwrConfig, ...config }
   );

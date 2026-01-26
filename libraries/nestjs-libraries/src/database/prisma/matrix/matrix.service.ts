@@ -36,11 +36,14 @@ export class MatrixService {
     organizationId: string,
     filters: MatrixFiltersDto
   ): Promise<MatrixResponseDto> {
+    // Use filters.limit or a reasonable default (100 for matrix view)
+    const soulsLimit = filters.limit || 100;
+
     // Fetch all data in parallel for efficiency
     const [soulsResult, integrations, mappings] = await Promise.all([
-      this.soulRepository.findAll(organizationId, { limit: 1000 }),
+      this.soulRepository.findAll(organizationId, { limit: soulsLimit }),
       this.matrixRepository.getAllIntegrations(organizationId),
-      this.matrixRepository.getAllMappings(organizationId),
+      this.matrixRepository.getAllMappingsLean(organizationId), // Use lean version without integration data
     ]);
 
     // Build a map of soulId -> integrationIds from mappings
@@ -71,7 +74,19 @@ export class MatrixService {
     return {
       souls,
       integrations: matrixIntegrations,
-      mappings: mappings.map((m) => this.toMappingResponseDto(m)),
+      // Use lean mapping data (no integration details - they're in the integrations array)
+      mappings: mappings.map((m) => ({
+        id: m.id,
+        soulId: m.soulId,
+        integrationId: m.integrationId,
+        organizationId: m.organizationId,
+        isPrimary: m.isPrimary,
+        priority: m.priority,
+        notes: m.notes ?? undefined,
+        createdBy: m.createdBy ?? undefined,
+        createdAt: m.createdAt,
+        updatedAt: m.updatedAt,
+      })),
       stats: {
         totalSouls: souls.length,
         totalIntegrations: integrations.length,

@@ -1,7 +1,7 @@
 import type { Soul, Platform } from '../types';
 
-// Re-export Platform for consumers of this module
-export type { Platform } from '../types';
+// Re-export Platform for convenience
+export type { Platform };
 
 /**
  * Integration represents a connected social media channel
@@ -98,17 +98,24 @@ export interface SetPrimaryInput {
 }
 
 /**
- * Bulk operation types for matrix management
+ * Bulk operation types for matrix management (matches backend enum)
  */
-export type BulkOperationType = 'connect' | 'disconnect' | 'set_primary' | 'clear_primary';
+export type BulkOperationType = 'create' | 'delete';
 
 /**
- * Input for bulk operations on the matrix
+ * Item for bulk mapping operation
+ */
+export interface BulkMappingItem {
+  soulId: string;
+  integrationId: string;
+}
+
+/**
+ * Input for bulk operations on the matrix (matches backend DTO)
  */
 export interface BulkOperationInput {
   operation: BulkOperationType;
-  soulIds: string[];
-  integrationIds: string[];
+  mappings: BulkMappingItem[];
 }
 
 /**

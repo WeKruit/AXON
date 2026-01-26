@@ -1,78 +1,48 @@
-'use client';
-
-import type { SWRConfiguration } from 'swr';
-import { preload } from 'swr';
-import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
+import { SWRConfiguration } from 'swr';
 
 /**
- * Default SWR configuration for AXON
- * - Optimized for dashboard-style data that doesn't need frequent updates
- * - Prevents unnecessary refetches on focus/reconnect
- * - keepPreviousData prevents content flash during refetch
+ * Global SWR configuration for optimal caching and performance
+ * Apply this via SWRConfig provider at the app root
  */
-export const defaultSwrConfig: SWRConfiguration = {
+export const globalSwrConfig: SWRConfiguration = {
+  // Disable automatic revalidation on window focus (too aggressive)
   revalidateOnFocus: false,
+
+  // Disable automatic revalidation on reconnect
   revalidateOnReconnect: false,
+
+  // Don't revalidate stale data automatically
   revalidateIfStale: false,
-  dedupingInterval: 2000, // Dedupe requests within 2s window
-  keepPreviousData: true, // Prevents content flash during refetch
+
+  // Deduplicate identical requests within 5 seconds
+  dedupingInterval: 5000,
+
+  // Limit retry attempts on error
+  errorRetryCount: 2,
+
+  // Throttle focus events to once per minute
+  focusThrottleInterval: 60000,
+
+  // Don't retry on errors automatically
+  shouldRetryOnError: false,
+
+  // Keep previous data while fetching new data (prevents flash)
+  keepPreviousData: true,
 };
 
 /**
- * SWR configuration for immutable/static data
- * - Data that rarely changes (e.g., platform types, config)
+ * Extended config for data that changes infrequently (e.g., user settings)
  */
-export const immutableSwrConfig: SWRConfiguration = {
-  ...defaultSwrConfig,
-  revalidateIfStale: false,
-  revalidateOnMount: false,
+export const stableDataSwrConfig: SWRConfiguration = {
+  ...globalSwrConfig,
+  dedupingInterval: 60000, // 1 minute
 };
 
 /**
- * SWR configuration for frequently updated data
- * - Data that may change often (e.g., real-time stats)
+ * Config for real-time data that should refresh more often
  */
 export const realtimeSwrConfig: SWRConfiguration = {
-  revalidateOnFocus: true,
-  revalidateOnReconnect: true,
-  dedupingInterval: 1000,
+  ...globalSwrConfig,
+  dedupingInterval: 2000, // 2 seconds
+  revalidateIfStale: true,
 };
-
-/**
- * Create a fetcher function for API endpoints
- */
-export function createFetcher(customFetch: ReturnType<typeof useFetch>) {
-  return async (url: string) => {
-    const response = await customFetch(url);
-    if (!response.ok) throw new Error(`Failed to fetch ${url}`);
-    const result = await response.json();
-    // Handle paginated responses from backend
-    return result?.data ?? result;
-  };
-}
-
-/**
- * Preload data for a route before navigation
- * Usage: Call on hover/focus for instant tab switching
- */
-export function preloadRoute(key: string, fetcher: () => Promise<unknown>) {
-  preload(key, fetcher);
-}
-
-/**
- * Keys for AXON API endpoints
- */
-export const AXON_CACHE_KEYS = {
-  souls: '/axon/souls',
-  soul: (id: string) => `/axon/souls/${id}`,
-  accounts: (soulId?: string) =>
-    soulId ? `/axon/accounts?soulId=${soulId}` : '/axon/accounts',
-  account: (id: string) => `/axon/accounts/${id}`,
-  personas: '/axon/personas',
-  persona: (id: string) => `/axon/personas/${id}`,
-  proxies: '/axon/proxies',
-  proxy: (id: string) => `/axon/proxies/${id}`,
-  integrations: '/integrations/list',
-  matrixMappings: '/axon/matrix/mappings',
-  analytics: '/axon/analytics',
-} as const;
