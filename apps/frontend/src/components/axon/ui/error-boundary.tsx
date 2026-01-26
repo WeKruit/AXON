@@ -65,7 +65,7 @@ export class AxonErrorBoundary extends Component<ErrorBoundaryProps, ErrorBounda
           </p>
           <button
             onClick={this.handleReset}
-            className="px-4 py-2 bg-newPrimaryColor text-white rounded-lg hover:bg-newPrimaryColor/90 transition-colors"
+            className="px-4 py-2 bg-btnPrimary text-white rounded-lg hover:bg-btnPrimary/90 transition-colors"
             aria-label="Try again"
           >
             Try Again

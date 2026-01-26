@@ -53,10 +53,10 @@ export const AxonNav: FC = () => {
               key={item.href}
               href={item.href}
               className={clsx(
-                'px-4 py-3 text-sm font-medium border-b-2 transition-colors',
+                'px-4 py-3 text-[14px] font-medium border-b-2 transition-colors',
                 isActive(item.href)
-                  ? 'border-newPrimaryColor text-newPrimaryColor'
-                  : 'border-transparent text-textItemBlur hover:text-white hover:border-newBgLineColor'
+                  ? 'border-btnPrimary text-btnPrimary'
+                  : 'border-transparent text-textItemBlur hover:text-newTextColor hover:border-newBgLineColor'
               )}
             >
               {item.label}

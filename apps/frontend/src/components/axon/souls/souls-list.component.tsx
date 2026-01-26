@@ -92,7 +92,7 @@ export const SoulsListComponent: FC = () => {
         </div>
         <button
           onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-newPrimaryColor text-white rounded-lg hover:bg-newPrimaryColor/90 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-btnPrimary text-white rounded-lg hover:bg-btnPrimary/90 transition-colors"
           aria-label="Create new soul"
         >
           <PlusIcon size="md" />
@@ -112,7 +112,7 @@ export const SoulsListComponent: FC = () => {
           </p>
           <button
             onClick={() => setIsCreateModalOpen(true)}
-            className="px-4 py-2 bg-newPrimaryColor text-white rounded-lg hover:bg-newPrimaryColor/90 transition-colors"
+            className="px-4 py-2 bg-btnPrimary text-white rounded-lg hover:bg-btnPrimary/90 transition-colors"
             aria-label="Create your first soul"
           >
             Create Your First Soul
@@ -164,7 +164,7 @@ const SoulCard: FC<SoulCardProps> = memo(({ soul, onDelete }) => {
             {soul.name.charAt(0).toUpperCase()}
           </div>
           <div>
-            <h3 className="font-medium group-hover:text-newPrimaryColor transition-colors">
+            <h3 className="font-medium group-hover:text-btnPrimary transition-colors">
               {soul.name}
             </h3>
             {soul.persona && (
