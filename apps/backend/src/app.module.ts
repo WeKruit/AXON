@@ -14,6 +14,7 @@ import { FILTER } from '@gitroom/nestjs-libraries/sentry/sentry.exception';
 import { ChatModule } from '@gitroom/nestjs-libraries/chat/chat.module';
 import { LLMModule } from '@gitroom/nestjs-libraries/llm/llm.module';
 import { FirebaseModule } from '@gitroom/nestjs-libraries/firebase/firebase.module';
+import { FirestoreModule } from '@gitroom/nestjs-libraries/database/firestore/firestore.module';
 import { PersonaModule } from '@gitroom/nestjs-libraries/persona/persona.module';
 
 // Static imports for Temporal modules - all are imported but only used based on SKIP_TEMPORAL
@@ -43,6 +44,7 @@ if (process.env.SKIP_TEMPORAL === 'true') {
     ...temporalModules,
     DatabaseModule,
     FirebaseModule,
+    FirestoreModule,
     ApiModule,
     PublicApiModule,
     AgentModule,
@@ -73,6 +75,7 @@ if (process.env.SKIP_TEMPORAL === 'true') {
   exports: [
     DatabaseModule,
     FirebaseModule,
+    FirestoreModule,
     ApiModule,
     PublicApiModule,
     AgentModule,
