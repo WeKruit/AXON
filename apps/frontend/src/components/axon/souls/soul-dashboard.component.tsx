@@ -1,8 +1,8 @@
 'use client';
 
-import { FC, useCallback, useState } from 'react';
+import { FC, Suspense, useCallback, useState, memo } from 'react';
 import Link from 'next/link';
-import { useSoul, useAccounts, useSoulMutations, useAccountMutations } from '../hooks';
+import { useSoulDashboard, useSoulMutations, useAccountMutations } from '../hooks';
 import { StatusBadge } from '../ui/status-badge';
 import { PlatformIcon, PlatformBadge } from '../ui/platform-icon';
 import { PurposeBadge } from '../ui/purpose-badge';
@@ -15,9 +15,21 @@ interface SoulDashboardProps {
   soulId: string;
 }
 
+/**
+ * Soul Dashboard Component
+ * Uses combined data fetching to eliminate waterfall requests (WEC-181)
+ * Soul and accounts are fetched in parallel via useSoulDashboard hook
+ */
 export const SoulDashboardComponent: FC<SoulDashboardProps> = ({ soulId }) => {
-  const { data: soul, isLoading: soulLoading, mutate: mutateSoul } = useSoul(soulId);
-  const { data: accounts, isLoading: accountsLoading, mutate: mutateAccounts } = useAccounts(soulId);
+  // Combined hook fetches soul + accounts in parallel - eliminates waterfall
+  const {
+    soul,
+    accounts,
+    isLoading,
+    mutate,
+    mutateSoul,
+    mutateAccounts,
+  } = useSoulDashboard(soulId);
   const { updateSoul, deleteSoul } = useSoulMutations();
   const { createAccount, deleteAccount } = useAccountMutations();
   const toaster = useToaster();
@@ -70,19 +82,8 @@ export const SoulDashboardComponent: FC<SoulDashboardProps> = ({ soulId }) => {
     [deleteAccount, mutateAccounts, toaster]
   );
 
-  if (soulLoading || !soul) {
-    return (
-      <div className="flex-1 bg-newBgColorInner p-6">
-        <div className="h-8 w-48 bg-newBgLineColor rounded animate-pulse mb-6" />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-4">
-            <div className="h-32 bg-newBgLineColor rounded-lg animate-pulse" />
-            <div className="h-64 bg-newBgLineColor rounded-lg animate-pulse" />
-          </div>
-          <div className="h-48 bg-newBgLineColor rounded-lg animate-pulse" />
-        </div>
-      </div>
-    );
+  if (isLoading || !soul) {
+    return <SoulDashboardSkeleton />;
   }
 
   return (
@@ -165,13 +166,7 @@ export const SoulDashboardComponent: FC<SoulDashboardProps> = ({ soulId }) => {
               </button>
             </div>
 
-            {accountsLoading ? (
-              <div className="space-y-2">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="h-16 bg-newBgColorInner rounded-lg animate-pulse" />
-                ))}
-              </div>
-            ) : !accounts || accounts.length === 0 ? (
+            {!accounts || accounts.length === 0 ? (
               <div className="text-center py-8 text-textItemBlur">
                 <p className="mb-2">No accounts linked to this soul yet</p>
                 <button
@@ -290,19 +285,83 @@ export const SoulDashboardComponent: FC<SoulDashboardProps> = ({ soulId }) => {
   );
 };
 
-const StatCard: FC<{ label: string; value: string | number }> = ({ label, value }) => (
+/**
+ * Skeleton loader for Soul Dashboard
+ * Provides visual feedback during initial load
+ */
+const SoulDashboardSkeleton: FC = () => (
+  <div className="flex-1 bg-newBgColorInner p-6">
+    <div className="h-4 w-24 bg-newBgLineColor rounded animate-pulse mb-4" />
+    <div className="flex items-start justify-between mb-6">
+      <div className="flex items-center gap-4">
+        <div className="w-16 h-16 rounded-full bg-newBgLineColor animate-pulse" />
+        <div>
+          <div className="h-7 w-36 bg-newBgLineColor rounded animate-pulse mb-2" />
+          <div className="h-4 w-48 bg-newBgLineColor rounded animate-pulse" />
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <div className="h-6 w-16 bg-newBgLineColor rounded animate-pulse" />
+        <div className="h-8 w-28 bg-newBgLineColor rounded animate-pulse" />
+      </div>
+    </div>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-newBgLineColor rounded-lg p-4 animate-pulse">
+              <div className="h-8 w-12 bg-newBgColorInner rounded mb-2" />
+              <div className="h-3 w-20 bg-newBgColorInner rounded" />
+            </div>
+          ))}
+        </div>
+        <div className="bg-newBgLineColor rounded-lg p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="h-6 w-20 bg-newBgColorInner rounded animate-pulse" />
+            <div className="h-8 w-28 bg-newBgColorInner rounded animate-pulse" />
+          </div>
+          <div className="space-y-2">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-16 bg-newBgColorInner rounded-lg animate-pulse" />
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="space-y-4">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="h-32 bg-newBgLineColor rounded-lg animate-pulse" />
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+/**
+ * Skeleton for accounts section (used with Suspense)
+ */
+export const AccountsSectionSkeleton: FC = () => (
+  <div className="space-y-2">
+    {[...Array(3)].map((_, i) => (
+      <div key={i} className="h-16 bg-newBgColorInner rounded-lg animate-pulse" />
+    ))}
+  </div>
+);
+
+const StatCard: FC<{ label: string; value: string | number }> = memo(({ label, value }) => (
   <div className="bg-newBgLineColor rounded-lg p-4">
     <p className="text-2xl font-semibold">{value}</p>
     <p className="text-xs text-textItemBlur mt-1">{label}</p>
   </div>
-);
+));
+
+StatCard.displayName = 'StatCard';
 
 interface AccountRowProps {
   account: Account;
   onDelete: () => void;
 }
 
-const AccountRow: FC<AccountRowProps> = ({ account, onDelete }) => (
+const AccountRow: FC<AccountRowProps> = memo(({ account, onDelete }) => (
   <div className="flex items-center justify-between p-3 bg-newBgColorInner rounded-lg group">
     <div className="flex items-center gap-3">
       <PlatformIcon platform={account.platform} size="md" />
@@ -358,4 +417,6 @@ const AccountRow: FC<AccountRowProps> = ({ account, onDelete }) => (
       </button>
     </div>
   </div>
-);
+));
+
+AccountRow.displayName = 'AccountRow';
