@@ -32,6 +32,7 @@ export class AccountRepository {
       warmingConfig: dto.warmingConfig,
       notes: dto.notes,
       tags: dto.tags || [],
+      deletedAt: null, // Explicitly set to null so queries for deletedAt == null work
     };
 
     return this.firestore.create<Account>(COLLECTION, data);
@@ -61,6 +62,7 @@ export class AccountRepository {
           warmingConfig: dto.warmingConfig,
           notes: dto.notes,
           tags: dto.tags || [],
+          deletedAt: null, // Explicitly set to null so queries for deletedAt == null work
         },
       };
     });

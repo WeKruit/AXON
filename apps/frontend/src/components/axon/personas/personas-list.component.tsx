@@ -19,8 +19,12 @@ export const PersonasListComponent: FC = () => {
   const handleCreatePersona = useCallback(
     async (data: CreatePersonaDto) => {
       try {
-        await createPersona(data);
-        await mutate();
+        const newPersona = await createPersona(data);
+        // Force revalidation bypassing deduplication
+        await mutate(
+          (currentData) => currentData ? [newPersona, ...currentData] : [newPersona],
+          { revalidate: true }
+        );
         setIsCreateModalOpen(false);
         toaster.show('Persona created successfully', 'success');
       } catch (error) {
@@ -33,8 +37,12 @@ export const PersonasListComponent: FC = () => {
   const handleGeneratePersona = useCallback(
     async (data: GeneratePersonaDto) => {
       try {
-        await generatePersona(data);
-        await mutate();
+        const newPersona = await generatePersona(data);
+        // Force revalidation bypassing deduplication
+        await mutate(
+          (currentData) => currentData ? [newPersona, ...currentData] : [newPersona],
+          { revalidate: true }
+        );
         setIsGenerateModalOpen(false);
         toaster.show('Persona generated successfully', 'success');
       } catch (error) {
@@ -54,7 +62,11 @@ export const PersonasListComponent: FC = () => {
 
       try {
         await deletePersona(persona.id);
-        await mutate();
+        // Force revalidation bypassing deduplication
+        await mutate(
+          (currentData) => currentData?.filter((p) => p.id !== persona.id) ?? [],
+          { revalidate: true }
+        );
         toaster.show('Persona deleted successfully', 'success');
       } catch (error) {
         toaster.show('Failed to delete persona', 'warning');

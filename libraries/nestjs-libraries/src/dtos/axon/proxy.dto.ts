@@ -8,7 +8,6 @@ import {
   IsNumber,
   MinLength,
   MaxLength,
-  IsUUID,
   IsUrl,
   IsBoolean,
   IsIP,
@@ -395,7 +394,7 @@ export class ProxyListQueryDto {
 // Proxy Assignment DTO
 export class AssignProxyDto {
   @ApiProperty({ description: 'Account ID to assign' })
-  @IsUUID()
+  @IsString()
   accountId: string;
 }
 

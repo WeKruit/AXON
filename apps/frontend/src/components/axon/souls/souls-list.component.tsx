@@ -22,8 +22,12 @@ export const SoulsListComponent: FC = () => {
   const handleCreateSoul = useCallback(
     async (data: CreateSoulDto) => {
       try {
-        await createSoul(data);
-        await mutate();
+        const newSoul = await createSoul(data);
+        // Force revalidation bypassing deduplication
+        await mutate(
+          (currentData) => currentData ? [newSoul, ...currentData] : [newSoul],
+          { revalidate: true }
+        );
         setIsCreateModalOpen(false);
         toaster.show('Soul created successfully', 'success');
       } catch (err) {
@@ -44,7 +48,11 @@ export const SoulsListComponent: FC = () => {
 
       try {
         await deleteSoul(soul.id);
-        await mutate();
+        // Force revalidation bypassing deduplication
+        await mutate(
+          (currentData) => currentData?.filter((s) => s.id !== soul.id) ?? [],
+          { revalidate: true }
+        );
         toaster.show('Soul deleted successfully', 'success');
       } catch (err) {
         console.error('Failed to delete soul:', err);

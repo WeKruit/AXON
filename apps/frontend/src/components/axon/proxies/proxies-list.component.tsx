@@ -50,8 +50,12 @@ export const ProxiesListComponent: FC = () => {
   const handleAddProxy = useCallback(
     async (data: CreateProxyDto) => {
       try {
-        await createProxy(data);
-        await mutate();
+        const newProxy = await createProxy(data);
+        // Force revalidation bypassing deduplication
+        await mutate(
+          (currentData) => currentData ? [newProxy, ...currentData] : [newProxy],
+          { revalidate: true }
+        );
         setIsAddModalOpen(false);
         toaster.show('Proxy added successfully', 'success');
       } catch (error) {
@@ -71,7 +75,11 @@ export const ProxiesListComponent: FC = () => {
 
       try {
         await deleteProxy(proxy.id);
-        await mutate();
+        // Force revalidation bypassing deduplication
+        await mutate(
+          (currentData) => currentData?.filter((p) => p.id !== proxy.id) ?? [],
+          { revalidate: true }
+        );
         toaster.show('Proxy deleted successfully', 'success');
       } catch (error) {
         toaster.show('Failed to delete proxy', 'warning');
@@ -85,7 +93,8 @@ export const ProxiesListComponent: FC = () => {
       setTestingProxyId(proxy.id);
       try {
         const result = await testProxy(proxy.id);
-        await mutate();
+        // Force revalidation to get updated proxy stats
+        await mutate(undefined, { revalidate: true });
         if (result.success) {
           toaster.show(`Proxy test successful - Latency: ${result.latency}ms`, 'success');
         } else {
@@ -104,7 +113,8 @@ export const ProxiesListComponent: FC = () => {
     async (proxy: Proxy) => {
       try {
         await rotateProxy(proxy.id);
-        await mutate();
+        // Force revalidation to get updated proxy data
+        await mutate(undefined, { revalidate: true });
         toaster.show('Proxy rotated successfully', 'success');
       } catch (error) {
         toaster.show('Failed to rotate proxy', 'warning');

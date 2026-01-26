@@ -10,7 +10,6 @@ import {
   IsObject,
   MinLength,
   MaxLength,
-  IsUUID,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -329,7 +328,7 @@ export class SoulListQueryDto {
   search?: string;
 
   @ApiPropertyOptional({ description: 'Filter by persona ID' })
-  @IsUUID()
+  @IsString()
   @IsOptional()
   personaId?: string;
 
