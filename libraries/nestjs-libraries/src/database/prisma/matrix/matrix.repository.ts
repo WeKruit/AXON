@@ -468,4 +468,60 @@ export class MatrixRepository {
       },
     });
   }
+
+  /**
+   * Get all integrations for an organization (for matrix view)
+   */
+  async getAllIntegrations(
+    organizationId: string
+  ): Promise<Array<{
+    id: string;
+    name: string;
+    picture: string | null;
+    providerIdentifier: string;
+    type: string;
+    disabled: boolean;
+  }>> {
+    return this._integration.model.integration.findMany({
+      where: {
+        organizationId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        name: true,
+        picture: true,
+        providerIdentifier: true,
+        type: true,
+        disabled: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  /**
+   * Get all mappings for an organization (without pagination, for matrix view)
+   */
+  async getAllMappings(
+    organizationId: string
+  ): Promise<MappingWithIntegration[]> {
+    return this._soulIntegrationMapping.model.soulIntegrationMapping.findMany({
+      where: {
+        organizationId,
+      },
+      include: {
+        integration: {
+          select: {
+            id: true,
+            name: true,
+            picture: true,
+            providerIdentifier: true,
+            type: true,
+            disabled: true,
+          },
+        },
+      },
+      orderBy: [{ soulId: 'asc' }, { isPrimary: 'desc' }, { priority: 'asc' }],
+    });
+  }
 }

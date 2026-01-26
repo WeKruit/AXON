@@ -237,22 +237,64 @@ export class IntegrationWithSoulsDto {
   totalSouls: number;
 }
 
+// Soul summary for matrix response
+export class MatrixSoulDto {
+  @ApiProperty({ description: 'Soul ID' })
+  id: string;
+
+  @ApiProperty({ description: 'Soul display name' })
+  name: string;
+
+  @ApiPropertyOptional({ description: 'Soul email' })
+  email?: string;
+
+  @ApiProperty({ description: 'Integration IDs mapped to this soul' })
+  integrationIds: string[];
+}
+
+// Integration summary for matrix response
+export class MatrixIntegrationDto {
+  @ApiProperty({ description: 'Integration ID' })
+  id: string;
+
+  @ApiProperty({ description: 'Integration/Channel name' })
+  name: string;
+
+  @ApiProperty({ description: 'Platform identifier (e.g., twitter, instagram)' })
+  platform: string;
+
+  @ApiPropertyOptional({ description: 'Profile picture URL' })
+  picture?: string;
+
+  @ApiProperty({ description: 'Whether the integration is disabled' })
+  disabled: boolean;
+}
+
+// Matrix stats
+export class MatrixStatsDto {
+  @ApiProperty({ description: 'Total number of souls' })
+  totalSouls: number;
+
+  @ApiProperty({ description: 'Total number of integrations' })
+  totalIntegrations: number;
+
+  @ApiProperty({ description: 'Total number of mappings' })
+  totalMappings: number;
+}
+
 // Full Matrix Response
 export class MatrixResponseDto {
+  @ApiProperty({ description: 'List of souls with their integration IDs', type: [MatrixSoulDto] })
+  souls: MatrixSoulDto[];
+
+  @ApiProperty({ description: 'List of integrations/channels', type: [MatrixIntegrationDto] })
+  integrations: MatrixIntegrationDto[];
+
   @ApiProperty({ description: 'List of all mappings', type: [MappingResponseDto] })
   mappings: MappingResponseDto[];
 
-  @ApiProperty({ description: 'Total count of mappings' })
-  total: number;
-
-  @ApiProperty({ description: 'Current page size' })
-  limit: number;
-
-  @ApiProperty({ description: 'Current page offset' })
-  offset: number;
-
-  @ApiProperty({ description: 'Whether there are more results' })
-  hasMore: boolean;
+  @ApiProperty({ description: 'Matrix statistics' })
+  stats: MatrixStatsDto;
 }
 
 // Bulk operation result
