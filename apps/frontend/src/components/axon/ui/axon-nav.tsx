@@ -13,19 +13,14 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   {
-    label: 'Souls',
-    href: '/axon/souls',
-    description: 'Identity containers',
-  },
-  {
     label: 'Matrix',
     href: '/axon/matrix',
     description: 'Soul-Channel connections',
   },
   {
-    label: 'Accounts',
-    href: '/axon/accounts',
-    description: 'Social accounts',
+    label: 'Souls',
+    href: '/axon/souls',
+    description: 'Identity containers',
   },
   {
     label: 'Personas',
@@ -43,8 +38,8 @@ export const AxonNav: FC = () => {
   const pathname = usePathname();
 
   const isActive = (href: string) => {
-    if (href === '/axon/souls') {
-      return pathname === '/axon' || pathname === '/axon/souls' || pathname.startsWith('/axon/souls/');
+    if (href === '/axon/matrix') {
+      return pathname === '/axon' || pathname === '/axon/matrix' || pathname.startsWith('/axon/matrix/');
     }
     return pathname === href || pathname.startsWith(`${href}/`);
   };
@@ -52,21 +47,24 @@ export const AxonNav: FC = () => {
   return (
     <nav className="bg-newBgColor border-b border-newBgLineColor">
       <div className="px-6">
-        <div className="flex items-center gap-1">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={clsx(
-                'px-4 py-3 text-[14px] font-medium border-b-2 transition-colors',
-                isActive(item.href)
-                  ? 'border-btnPrimary text-btnPrimary'
-                  : 'border-transparent text-textItemBlur hover:text-newTextColor hover:border-newBgLineColor'
-              )}
-            >
-              {item.label}
-            </Link>
-          ))}
+        <div className="flex items-center">
+          {/* Navigation tabs */}
+          <div className="flex items-center gap-1">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={clsx(
+                  'px-4 py-3 text-[14px] font-medium border-b-2 transition-colors',
+                  isActive(item.href)
+                    ? 'border-btnPrimary text-btnPrimary'
+                    : 'border-transparent text-textItemBlur hover:text-newTextColor hover:border-newBgLineColor'
+                )}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
     </nav>

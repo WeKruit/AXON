@@ -1,11 +1,12 @@
 'use client';
 
-import { FC, useCallback, useMemo, useState } from 'react';
+import { FC, useCallback, useMemo, useState, useEffect } from 'react';
 import { MatrixGrid } from './matrix-grid.component';
 import { useMatrix, useMatrixMutations, useMatrixStats } from './use-matrix';
 import { ErrorState } from '../ui/error-boundary';
 import { FilterIcon, GridIcon, RefreshIcon } from '../ui/icons';
 import { useToaster } from '@gitroom/react/toaster/toaster';
+import { useSoulContextOptional } from '../context/soul-context';
 import type { MatrixFilters, Platform } from './types';
 
 const PLATFORM_OPTIONS: { value: Platform | ''; label: string }[] = [
@@ -25,9 +26,21 @@ export const MatrixListComponent: FC = () => {
   const { toggleMapping, setPrimary, bulkOperation } = useMatrixMutations();
   const stats = useMatrixStats(data);
   const toaster = useToaster();
+  const soulContext = useSoulContextOptional();
 
   const [filters, setFilters] = useState<MatrixFilters>({});
   const [showFilters, setShowFilters] = useState(false);
+
+  // Sync Soul context with filters - when user selects a Soul in the header,
+  // automatically filter the matrix to that Soul
+  useEffect(() => {
+    if (soulContext) {
+      setFilters((prev) => ({
+        ...prev,
+        soulId: soulContext.selectedSoulId || undefined,
+      }));
+    }
+  }, [soulContext?.selectedSoulId]);
 
   const handleToggleMapping = useCallback(
     async (soulId: string, integrationId: string) => {
@@ -45,19 +58,19 @@ export const MatrixListComponent: FC = () => {
   const handleSetPrimary = useCallback(
     async (soulId: string, integrationId: string) => {
       try {
+        // Find the mapping by soulId and integrationId
         const mapping = data?.mappings.find(
           (m) => m.soulId === soulId && m.integrationId === integrationId
         );
-        await setPrimary({
-          soulId,
-          integrationId,
-          isPrimary: !mapping?.isPrimary,
-        });
+
+        if (!mapping) {
+          toaster.show('Connection must exist before setting as primary', 'warning');
+          return;
+        }
+
+        await setPrimary(mapping.id);
         await mutate();
-        toaster.show(
-          mapping?.isPrimary ? 'Primary status removed' : 'Set as primary',
-          'success'
-        );
+        toaster.show('Set as primary', 'success');
       } catch (err) {
         console.error('Failed to set primary:', err);
         toaster.show('Failed to update primary status', 'warning');
@@ -69,10 +82,13 @@ export const MatrixListComponent: FC = () => {
   const handleBulkConnect = useCallback(
     async (soulIds: string[], integrationIds: string[]) => {
       try {
+        // Build mappings array from cartesian product of soulIds and integrationIds
+        const mappings = soulIds.flatMap((soulId) =>
+          integrationIds.map((integrationId) => ({ soulId, integrationId }))
+        );
         await bulkOperation({
-          operation: 'connect',
-          soulIds,
-          integrationIds,
+          operation: 'create',
+          mappings,
         });
         await mutate();
         toaster.show('Connections created successfully', 'success');
@@ -87,10 +103,13 @@ export const MatrixListComponent: FC = () => {
   const handleBulkDisconnect = useCallback(
     async (soulIds: string[], integrationIds: string[]) => {
       try {
+        // Build mappings array from cartesian product of soulIds and integrationIds
+        const mappings = soulIds.flatMap((soulId) =>
+          integrationIds.map((integrationId) => ({ soulId, integrationId }))
+        );
         await bulkOperation({
-          operation: 'disconnect',
-          soulIds,
-          integrationIds,
+          operation: 'delete',
+          mappings,
         });
         await mutate();
         toaster.show('Connections removed successfully', 'success');

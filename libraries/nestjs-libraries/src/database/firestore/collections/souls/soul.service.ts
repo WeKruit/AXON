@@ -6,7 +6,7 @@ import {
   UpdateSoulDto,
   SoulListQueryDto,
   SoulResponseDto,
-  SoulType,
+  SoulStatus,
 } from '@gitroom/nestjs-libraries/dtos/axon';
 
 @Injectable()
@@ -14,33 +14,14 @@ export class SoulService {
   constructor(private readonly soulRepository: SoulRepository) {}
 
   async create(organizationId: string, dto: CreateSoulDto): Promise<SoulResponseDto> {
-    // Validate that email is provided for email or both types
-    if ((dto.type === SoulType.EMAIL || dto.type === SoulType.BOTH) && !dto.email) {
-      throw new ConflictException('Email is required for email-type souls');
-    }
+    // Create soul with default status
+    const soulData = {
+      ...dto,
+      status: SoulStatus.ACTIVE,
+      accountIds: [],
+    };
 
-    // Validate that phone is provided for phone or both types
-    if ((dto.type === SoulType.PHONE || dto.type === SoulType.BOTH) && !dto.phone) {
-      throw new ConflictException('Phone is required for phone-type souls');
-    }
-
-    // Check for duplicate email
-    if (dto.email) {
-      const existingByEmail = await this.soulRepository.findByEmail(organizationId, dto.email);
-      if (existingByEmail) {
-        throw new ConflictException('A soul with this email already exists');
-      }
-    }
-
-    // Check for duplicate phone
-    if (dto.phone) {
-      const existingByPhone = await this.soulRepository.findByPhone(organizationId, dto.phone);
-      if (existingByPhone) {
-        throw new ConflictException('A soul with this phone already exists');
-      }
-    }
-
-    const soul = await this.soulRepository.create(organizationId, dto);
+    const soul = await this.soulRepository.create(organizationId, soulData);
     return this.toResponseDto(soul);
   }
 
@@ -122,17 +103,23 @@ export class SoulService {
     return {
       id: soul.id,
       organizationId: soul.organizationId,
+      name: soul.name,
+      description: soul.description,
+      status: soul.status || SoulStatus.ACTIVE,
+      personaId: soul.personaId,
+      proxyId: soul.proxyId,
+      accountIds: soul.accountIds || [],
+      accountCount: (soul.accountIds || []).length,
+      metadata: soul.metadata,
+      createdAt: soul.createdAt instanceof Date ? soul.createdAt : new Date((soul.createdAt as any)._seconds * 1000),
+      updatedAt: soul.updatedAt instanceof Date ? soul.updatedAt : new Date((soul.updatedAt as any)._seconds * 1000),
+      // Legacy fields
       type: soul.type,
       email: soul.email,
       phone: soul.phone,
       displayName: soul.displayName,
       firstName: soul.firstName,
       lastName: soul.lastName,
-      accountIds: soul.accountIds || [],
-      personaId: soul.personaId,
-      accountCount: (soul.accountIds || []).length,
-      createdAt: soul.createdAt instanceof Date ? soul.createdAt : new Date((soul.createdAt as any)._seconds * 1000),
-      updatedAt: soul.updatedAt instanceof Date ? soul.updatedAt : new Date((soul.updatedAt as any)._seconds * 1000),
     };
   }
 }

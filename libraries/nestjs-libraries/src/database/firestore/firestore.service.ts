@@ -76,6 +76,9 @@ export class FirestoreService implements OnModuleInit {
       }
       this.initialized = true;
       this.logger.log('Firestore initialized successfully');
+
+      // Test Firestore connection by attempting a simple read
+      this.testConnection();
     } catch (error) {
       this.logger.error('Failed to initialize Firestore', error);
       throw error;
@@ -87,6 +90,17 @@ export class FirestoreService implements OnModuleInit {
       throw new Error('Firestore not initialized. Check Firebase configuration.');
     }
     return this.db;
+  }
+
+  private async testConnection(): Promise<void> {
+    try {
+      // Try to list collections to test connection
+      const collections = await this.db.listCollections();
+      this.logger.log(`Firestore connection verified. Found ${collections.length} collections.`);
+    } catch (error: any) {
+      this.logger.error(`Firestore connection test failed: ${error?.message || error}`);
+      this.logger.error('Please ensure Firestore is enabled in Native mode in Firebase Console');
+    }
   }
 
   collection<T = admin.firestore.DocumentData>(path: string): CollectionReference<T> {
@@ -115,22 +129,33 @@ export class FirestoreService implements OnModuleInit {
     data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>,
     customId?: string
   ): Promise<T> {
-    const collectionRef = this.collection<T>(collection);
-    const now = admin.firestore.Timestamp.now();
-    const docData = {
-      ...data,
-      createdAt: now,
-      updatedAt: now,
-    } as unknown as T;
+    try {
+      const collectionRef = this.collection<T>(collection);
+      const now = admin.firestore.Timestamp.now();
 
-    if (customId) {
-      const docRef = collectionRef.doc(customId);
-      await docRef.set(docData);
-      return { id: customId, ...docData } as T;
+      // Filter out undefined values - Firestore doesn't accept undefined
+      const filteredData = Object.fromEntries(
+        Object.entries(data).filter(([_, v]) => v !== undefined)
+      );
+
+      const docData = {
+        ...filteredData,
+        createdAt: now,
+        updatedAt: now,
+      } as unknown as T;
+
+      if (customId) {
+        const docRef = collectionRef.doc(customId);
+        await docRef.set(docData);
+        return { id: customId, ...docData } as T;
+      }
+
+      const docRef = await collectionRef.add(docData);
+      return { id: docRef.id, ...docData } as T;
+    } catch (error: any) {
+      this.logger.error(`Failed to create document in '${collection}':`, error?.message || error);
+      throw error;
     }
-
-    const docRef = await collectionRef.add(docData);
-    return { id: docRef.id, ...docData } as T;
   }
 
   async update<T>(

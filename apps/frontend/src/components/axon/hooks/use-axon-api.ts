@@ -26,6 +26,7 @@ const defaultSwrConfig: SWRConfiguration = {
   revalidateOnFocus: false,
   revalidateOnReconnect: false,
   revalidateIfStale: false,
+  dedupingInterval: 5000, // Dedupe identical requests within 5 seconds
 };
 
 export function useSouls(config?: SWRConfiguration) {
@@ -162,7 +163,7 @@ export function usePersonas(config?: SWRConfiguration) {
     if (!response.ok) throw new Error('Failed to fetch personas');
     const result = await response.json();
     // Backend returns { data: Persona[], hasMore: boolean }
-    return (result?.data ?? result ?? []) as Persona[];
+    return (result?.data ?? result?.personas ?? (Array.isArray(result) ? result : [])) as Persona[];
   }, [fetch]);
 
   return useSWR<Persona[]>('/axon/personas', fetcher, { ...defaultSwrConfig, ...config });
