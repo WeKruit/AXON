@@ -40,6 +40,7 @@ model Organization {
   usedCodes         UsedCodes[]
   users             UserOrganization[]
   webhooks          Webhooks[]
+  soulMappings      SoulIntegrationMapping[]
 }
 
 model Tags {
@@ -330,6 +331,7 @@ model Integration {
   orderItems            OrderItems[]
   plugs                 Plugs[]
   posts                 Post[]
+  soulMappings          SoulIntegrationMapping[]
 
   @@unique([organizationId, internalId])
   @@index([rootInternalId])
@@ -886,4 +888,26 @@ enum ShortLinkPreference {
   ASK
   YES
   NO
+}
+
+model SoulIntegrationMapping {
+  id             String       @id @default(cuid())
+  soulId         String
+  integrationId  String
+  organizationId String
+  isPrimary      Boolean      @default(false)
+  priority       Int          @default(0)
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  createdBy      String?
+
+  integration    Integration  @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([soulId, integrationId])
+  @@index([soulId])
+  @@index([integrationId])
+  @@index([organizationId])
+  @@map("soul_integration_mapping")
 }
