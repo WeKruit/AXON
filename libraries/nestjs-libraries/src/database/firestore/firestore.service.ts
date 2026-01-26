@@ -161,93 +161,120 @@ export class FirestoreService implements OnModuleInit {
     collection: string,
     options: FirestoreQueryOptions = {}
   ): Promise<T[]> {
-    let query: Query<T> = this.collection<T>(collection);
+    try {
+      let query: Query<T> = this.collection<T>(collection);
 
-    // Apply where clauses
-    if (options.where) {
-      for (const condition of options.where) {
-        query = query.where(condition.field, condition.operator, condition.value);
+      // Apply where clauses
+      if (options.where) {
+        for (const condition of options.where) {
+          query = query.where(condition.field, condition.operator, condition.value);
+        }
       }
-    }
 
-    // Apply orderBy
-    if (options.orderBy) {
-      for (const order of options.orderBy) {
-        query = query.orderBy(order.field, order.direction || 'asc');
+      // Apply orderBy
+      if (options.orderBy) {
+        for (const order of options.orderBy) {
+          query = query.orderBy(order.field, order.direction || 'asc');
+        }
       }
-    }
 
-    // Apply offset
-    if (options.offset) {
-      query = query.offset(options.offset);
-    }
+      // Apply offset
+      if (options.offset) {
+        query = query.offset(options.offset);
+      }
 
-    // Apply startAfter for cursor-based pagination
-    if (options.startAfter) {
-      query = query.startAfter(options.startAfter);
-    }
+      // Apply startAfter for cursor-based pagination
+      if (options.startAfter) {
+        query = query.startAfter(options.startAfter);
+      }
 
-    // Apply limit
-    if (options.limit) {
-      query = query.limit(options.limit);
-    }
+      // Apply limit
+      if (options.limit) {
+        query = query.limit(options.limit);
+      }
 
-    const snapshot = await query.get();
-    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as T));
+      const snapshot = await query.get();
+      return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as T));
+    } catch (error: any) {
+      // Handle collection not found or other Firestore errors gracefully
+      if (error?.code === 5 || error?.message?.includes('NOT_FOUND')) {
+        this.logger.warn(`Collection '${collection}' not found, returning empty array`);
+        return [];
+      }
+      throw error;
+    }
   }
 
   async queryPaginated<T>(
     collection: string,
     options: FirestoreQueryOptions = {}
   ): Promise<PaginatedResult<T>> {
-    const limit = options.limit || 20;
-    let query: Query<T> = this.collection<T>(collection);
+    try {
+      const limit = options.limit || 20;
+      let query: Query<T> = this.collection<T>(collection);
 
-    // Apply where clauses
-    if (options.where) {
-      for (const condition of options.where) {
-        query = query.where(condition.field, condition.operator, condition.value);
+      // Apply where clauses
+      if (options.where) {
+        for (const condition of options.where) {
+          query = query.where(condition.field, condition.operator, condition.value);
+        }
       }
-    }
 
-    // Apply orderBy
-    if (options.orderBy) {
-      for (const order of options.orderBy) {
-        query = query.orderBy(order.field, order.direction || 'asc');
+      // Apply orderBy
+      if (options.orderBy) {
+        for (const order of options.orderBy) {
+          query = query.orderBy(order.field, order.direction || 'asc');
+        }
       }
+
+      // Apply startAfter for cursor-based pagination
+      if (options.startAfter) {
+        query = query.startAfter(options.startAfter);
+      }
+
+      // Fetch one extra to check if there are more
+      query = query.limit(limit + 1);
+
+      const snapshot = await query.get();
+      const hasMore = snapshot.docs.length > limit;
+      const docs = hasMore ? snapshot.docs.slice(0, limit) : snapshot.docs;
+      const lastDoc = docs.length > 0 ? docs[docs.length - 1] : undefined;
+
+      return {
+        data: docs.map((doc) => ({ id: doc.id, ...doc.data() } as T)),
+        hasMore,
+        lastDoc,
+      };
+    } catch (error: any) {
+      // Handle collection not found or other Firestore errors gracefully
+      if (error?.code === 5 || error?.message?.includes('NOT_FOUND')) {
+        this.logger.warn(`Collection '${collection}' not found, returning empty result`);
+        return { data: [], hasMore: false, lastDoc: undefined };
+      }
+      throw error;
     }
-
-    // Apply startAfter for cursor-based pagination
-    if (options.startAfter) {
-      query = query.startAfter(options.startAfter);
-    }
-
-    // Fetch one extra to check if there are more
-    query = query.limit(limit + 1);
-
-    const snapshot = await query.get();
-    const hasMore = snapshot.docs.length > limit;
-    const docs = hasMore ? snapshot.docs.slice(0, limit) : snapshot.docs;
-    const lastDoc = docs.length > 0 ? docs[docs.length - 1] : undefined;
-
-    return {
-      data: docs.map((doc) => ({ id: doc.id, ...doc.data() } as T)),
-      hasMore,
-      lastDoc,
-    };
   }
 
   async count(collection: string, options: Omit<FirestoreQueryOptions, 'limit' | 'offset'> = {}): Promise<number> {
-    let query: Query = this.collection(collection);
+    try {
+      let query: Query = this.collection(collection);
 
-    if (options.where) {
-      for (const condition of options.where) {
-        query = query.where(condition.field, condition.operator, condition.value);
+      if (options.where) {
+        for (const condition of options.where) {
+          query = query.where(condition.field, condition.operator, condition.value);
+        }
       }
-    }
 
-    const snapshot = await query.count().get();
-    return snapshot.data().count;
+      const snapshot = await query.count().get();
+      return snapshot.data().count;
+    } catch (error: any) {
+      // Handle collection not found gracefully
+      if (error?.code === 5 || error?.message?.includes('NOT_FOUND')) {
+        this.logger.warn(`Collection '${collection}' not found, returning 0`);
+        return 0;
+      }
+      throw error;
+    }
   }
 
   async exists(collection: string, id: string): Promise<boolean> {
