@@ -34,7 +34,9 @@ export function useSouls(config?: SWRConfiguration) {
   const fetcher = useCallback(async () => {
     const response = await fetch('/axon/souls');
     if (!response.ok) throw new Error('Failed to fetch souls');
-    return response.json() as Promise<Soul[]>;
+    const result = await response.json();
+    // Backend returns { data: Soul[], hasMore: boolean }
+    return (result?.data ?? result ?? []) as Soul[];
   }, [fetch]);
 
   return useSWR<Soul[]>('/axon/souls', fetcher, { ...defaultSwrConfig, ...config });
@@ -95,7 +97,9 @@ export function useAccounts(soulId?: string, config?: SWRConfiguration) {
     const url = soulId ? `/axon/accounts?soulId=${soulId}` : '/axon/accounts';
     const response = await fetch(url);
     if (!response.ok) throw new Error('Failed to fetch accounts');
-    return response.json() as Promise<Account[]>;
+    const result = await response.json();
+    // Backend returns { data: Account[], hasMore: boolean }
+    return (result?.data ?? result ?? []) as Account[];
   }, [fetch, soulId]);
 
   const key = soulId ? `/axon/accounts?soulId=${soulId}` : '/axon/accounts';
@@ -156,7 +160,9 @@ export function usePersonas(config?: SWRConfiguration) {
   const fetcher = useCallback(async () => {
     const response = await fetch('/axon/personas');
     if (!response.ok) throw new Error('Failed to fetch personas');
-    return response.json() as Promise<Persona[]>;
+    const result = await response.json();
+    // Backend returns { data: Persona[], hasMore: boolean }
+    return (result?.data ?? result ?? []) as Persona[];
   }, [fetch]);
 
   return useSWR<Persona[]>('/axon/personas', fetcher, { ...defaultSwrConfig, ...config });
@@ -225,7 +231,9 @@ export function useProxies(config?: SWRConfiguration) {
   const fetcher = useCallback(async () => {
     const response = await fetch('/axon/proxies');
     if (!response.ok) throw new Error('Failed to fetch proxies');
-    return response.json() as Promise<Proxy[]>;
+    const result = await response.json();
+    // Backend returns { data: Proxy[], hasMore: boolean }
+    return (result?.data ?? result ?? []) as Proxy[];
   }, [fetch]);
 
   return useSWR<Proxy[]>('/axon/proxies', fetcher, { ...defaultSwrConfig, ...config });
