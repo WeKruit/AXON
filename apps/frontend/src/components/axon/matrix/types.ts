@@ -1,5 +1,8 @@
 import type { Soul, Platform } from '../types';
 
+// Re-export Platform for consumers of this module
+export type { Platform } from '../types';
+
 /**
  * Integration represents a connected social media channel
  * This mirrors the backend integration model used in the launches system

@@ -1,6 +1,6 @@
 'use client';
 
-import { FC, useCallback, useMemo, useState } from 'react';
+import React, { FC, useCallback, useMemo, useState, memo } from 'react';
 import { MatrixGrid } from './matrix-grid.component';
 import { useMatrix, useMatrixMutations, useMatrixStats } from './use-matrix';
 import { ErrorState } from '../ui/error-boundary';
@@ -287,9 +287,81 @@ interface StatCardProps {
   value: number | string;
 }
 
-const StatCard: FC<StatCardProps> = ({ label, value }) => (
+const StatCard: FC<StatCardProps> = memo(({ label, value }) => (
   <div className="bg-newBgLineColor rounded-lg p-4">
     <p className="text-xs text-textItemBlur mb-1">{label}</p>
     <p className="text-2xl font-semibold">{value}</p>
+  </div>
+));
+
+StatCard.displayName = 'StatCard';
+
+/**
+ * Skeleton loader for Matrix List
+ * Exported for use with Suspense boundaries
+ */
+export const MatrixListSkeleton: FC = () => (
+  <div className="flex-1 bg-newBgColorInner p-6">
+    {/* Header skeleton */}
+    <div className="flex items-center justify-between mb-6">
+      <div>
+        <div className="h-8 w-48 bg-newBgLineColor rounded animate-pulse mb-2" />
+        <div className="h-4 w-72 bg-newBgLineColor rounded animate-pulse" />
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="h-10 w-24 bg-newBgLineColor rounded animate-pulse" />
+        <div className="h-10 w-10 bg-newBgLineColor rounded animate-pulse" />
+      </div>
+    </div>
+
+    {/* Stats skeleton */}
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+      {[...Array(5)].map((_, i) => (
+        <div key={i} className="bg-newBgLineColor rounded-lg p-4 animate-pulse">
+          <div className="h-3 w-16 bg-newBgColorInner rounded mb-2" />
+          <div className="h-8 w-12 bg-newBgColorInner rounded" />
+        </div>
+      ))}
+    </div>
+
+    {/* Grid skeleton */}
+    <div className="bg-newBgLineColor rounded-lg p-4">
+      <div className="flex items-center gap-6 mb-4">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded bg-newBgColorInner animate-pulse" />
+            <div className="w-16 h-4 rounded bg-newBgColorInner animate-pulse" />
+          </div>
+        ))}
+      </div>
+      <div className="overflow-x-auto pb-4">
+        <div
+          className="grid gap-2"
+          style={{ gridTemplateColumns: '200px repeat(6, 48px)' }}
+        >
+          <div className="h-24" />
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="h-24 flex flex-col justify-end pb-2">
+              <div className="w-6 h-6 rounded-full bg-newBgColorInner animate-pulse mx-auto" />
+              <div className="w-8 h-3 rounded bg-newBgColorInner animate-pulse mx-auto mt-1" />
+            </div>
+          ))}
+          {[...Array(4)].map((_, rowIndex) => (
+            <React.Fragment key={`row-${rowIndex}`}>
+              <div className="flex items-center gap-2 h-10">
+                <div className="w-8 h-8 rounded-full bg-newBgColorInner animate-pulse" />
+                <div className="w-20 h-4 rounded bg-newBgColorInner animate-pulse" />
+              </div>
+              {[...Array(6)].map((_, colIndex) => (
+                <div
+                  key={`cell-${rowIndex}-${colIndex}`}
+                  className="w-8 h-8 rounded border-2 border-newBgColorInner bg-newBgColor animate-pulse mx-auto"
+                />
+              ))}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+    </div>
   </div>
 );
