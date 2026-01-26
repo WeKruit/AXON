@@ -9,16 +9,16 @@ datasource db {
 }
 
 model Organization {
-  id                String              @id @default(uuid())
+  id                String                    @id @default(uuid())
   name              String
   description       String?
   apiKey            String?
   paymentId         String?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  allowTrial        Boolean             @default(false)
-  isTrailing        Boolean             @default(false)
-  shortlink         ShortLinkPreference @default(ASK)
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  allowTrial        Boolean                   @default(false)
+  isTrailing        Boolean                   @default(false)
+  shortlink         ShortLinkPreference       @default(ASK)
   autoPost          AutoPost[]
   Comments          Comments[]
   credits           Credits[]
@@ -30,8 +30,8 @@ model Organization {
   buyerOrganization MessagesGroup[]
   notifications     Notifications[]
   plugs             Plugs[]
-  post              Post[]             @relation("organization")
-  submittedPost     Post[]             @relation("submittedForOrg")
+  post              Post[]                    @relation("organization")
+  submittedPost     Post[]                    @relation("submittedForOrg")
   sets              Sets[]
   signatures        Signatures[]
   subscription      Subscription?
@@ -40,6 +40,7 @@ model Organization {
   usedCodes         UsedCodes[]
   users             UserOrganization[]
   webhooks          Webhooks[]
+  soulMappings      SoulIntegrationMapping[]
 }
 
 model Tags {
@@ -301,7 +302,7 @@ model Customer {
 }
 
 model Integration {
-  id                    String                 @id @default(cuid())
+  id                    String                    @id @default(cuid())
   internalId            String
   organizationId        String
   name                  String
@@ -309,27 +310,28 @@ model Integration {
   providerIdentifier    String
   type                  String
   token                 String
-  disabled              Boolean                @default(false)
+  disabled              Boolean                   @default(false)
   tokenExpiration       DateTime?
   refreshToken          String?
   profile               String?
   deletedAt             DateTime?
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime?              @updatedAt
-  inBetweenSteps        Boolean                @default(false)
-  refreshNeeded         Boolean                @default(false)
-  postingTimes          String                 @default("[{\"time\":120}, {\"time\":400}, {\"time\":700}]")
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime?                 @updatedAt
+  inBetweenSteps        Boolean                   @default(false)
+  refreshNeeded         Boolean                   @default(false)
+  postingTimes          String                    @default("[{\"time\":120}, {\"time\":400}, {\"time\":700}]")
   customInstanceDetails String?
   customerId            String?
   rootInternalId        String?
-  additionalSettings    String?                @default("[]")
+  additionalSettings    String?                   @default("[]")
   exisingPlugData       ExisingPlugData[]
-  customer              Customer?              @relation(fields: [customerId], references: [id])
-  organization          Organization           @relation(fields: [organizationId], references: [id])
+  customer              Customer?                 @relation(fields: [customerId], references: [id])
+  organization          Organization              @relation(fields: [organizationId], references: [id])
   webhooks              IntegrationsWebhooks[]
   orderItems            OrderItems[]
   plugs                 Plugs[]
   posts                 Post[]
+  soulMappings          SoulIntegrationMapping[]
 
   @@unique([organizationId, internalId])
   @@index([rootInternalId])
@@ -827,6 +829,28 @@ model mastra_workflow_snapshot {
   updatedAtZ    DateTime? @default(now()) @db.Timestamptz(6)
 
   @@unique([workflow_name, run_id], map: "public_mastra_workflow_snapshot_workflow_name_run_id_key")
+}
+
+model SoulIntegrationMapping {
+  id             String       @id @default(cuid())
+  soulId         String       // Firestore Soul document ID
+  integrationId  String
+  organizationId String
+  isPrimary      Boolean      @default(false)
+  priority       Int          @default(0)
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  createdBy      String?
+
+  integration    Integration  @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([soulId, integrationId])
+  @@index([soulId])
+  @@index([integrationId])
+  @@index([organizationId])
+  @@map("soul_integration_mapping")
 }
 
 enum OrderStatus {
