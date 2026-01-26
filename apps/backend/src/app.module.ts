@@ -42,7 +42,7 @@ if (process.env.SKIP_TEMPORAL === 'true') {
     // MockTemporalModule must come before DatabaseModule since services depend on TemporalService
     ...temporalModules,
     DatabaseModule,
-    FirestoreModule,
+    FirebaseModule,
     ApiModule,
     PublicApiModule,
     AgentModule,
@@ -50,7 +50,6 @@ if (process.env.SKIP_TEMPORAL === 'true') {
     VideoModule,
     ChatModule,
     LLMModule,
-    FirebaseModule,
     PersonaModule,
     ThrottlerModule.forRoot([
       {
@@ -73,14 +72,13 @@ if (process.env.SKIP_TEMPORAL === 'true') {
   ],
   exports: [
     DatabaseModule,
-    FirestoreModule,
+    FirebaseModule,
     ApiModule,
     PublicApiModule,
     AgentModule,
     ThrottlerModule,
     ChatModule,
     LLMModule,
-    FirebaseModule,
     PersonaModule,
   ],
 })
