@@ -83,6 +83,13 @@ export interface GeneratedPersona {
   samplePosts: string[];
 }
 
+export interface ContentAnalysis {
+  sentiment: 'positive' | 'negative' | 'neutral';
+  tone: string;
+  topics: string[];
+  suggestions: string[];
+}
+
 @Injectable()
 export class LLMService {
   private readonly logger = new Logger(LLMService.name);
@@ -191,7 +198,7 @@ Return a JSON object with:
       }
       const parsed = JSON.parse(jsonMatch[0]);
       // Validate with Zod schema
-      return GeneratedPersonaSchema.parse(parsed);
+      return GeneratedPersonaSchema.parse(parsed) as GeneratedPersona;
     } catch (error) {
       this.logger.error('Failed to parse persona response:', error);
       throw new Error('Failed to generate valid persona');
@@ -277,12 +284,7 @@ Return as a JSON array: ["variation1", "variation2", ...]`,
   async analyzeContent(
     content: string,
     provider?: LLMProviderType
-  ): Promise<{
-    sentiment: 'positive' | 'negative' | 'neutral';
-    tone: string;
-    topics: string[];
-    suggestions: string[];
-  }> {
+  ): Promise<ContentAnalysis> {
     // Sanitize input
     const sanitizedContent = sanitizeInput(content, 2000);
 
@@ -315,7 +317,7 @@ Return a JSON object with:
       }
       const parsed = JSON.parse(jsonMatch[0]);
       // Validate with Zod schema
-      return ContentAnalysisSchema.parse(parsed);
+      return ContentAnalysisSchema.parse(parsed) as ContentAnalysis;
     } catch (error) {
       this.logger.error('Failed to parse analysis response:', error);
       return {
@@ -323,7 +325,7 @@ Return a JSON object with:
         tone: 'unknown',
         topics: [],
         suggestions: [],
-      };
+      } satisfies ContentAnalysis;
     }
   }
 
