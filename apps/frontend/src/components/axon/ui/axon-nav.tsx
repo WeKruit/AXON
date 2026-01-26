@@ -53,7 +53,14 @@ const navItems: NavItem[] = [
  */
 export const AxonNav: FC = () => {
   const pathname = usePathname();
-  const { preloadSouls, preloadAccounts, preloadPersonas, preloadProxies } = usePreloadFunctions();
+  const {
+    preloadSouls,
+    preloadAccounts,
+    preloadPersonas,
+    preloadProxies,
+    preloadIntegrations,
+    preloadMatrixMappings,
+  } = usePreloadFunctions();
 
   // Track which tabs have been preloaded to avoid redundant calls
   const preloadedRef = useRef<Set<string>>(new Set());
@@ -89,11 +96,13 @@ export const AxonNav: FC = () => {
         preloadProxies();
         break;
       case 'matrix':
-        // Matrix preloads souls internally via useMatrix hook
+        // Matrix needs souls, integrations, and mappings
         preloadSouls();
+        preloadIntegrations();
+        preloadMatrixMappings();
         break;
     }
-  }, [pathname, preloadSouls, preloadAccounts, preloadPersonas, preloadProxies]);
+  }, [pathname, preloadSouls, preloadAccounts, preloadPersonas, preloadProxies, preloadIntegrations, preloadMatrixMappings]);
 
   return (
     <nav className="bg-newBgColor border-b border-newBgLineColor">

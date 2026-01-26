@@ -1,6 +1,6 @@
 'use client';
 
-import { FC, useCallback, useMemo, useState, memo } from 'react';
+import React, { FC, useCallback, useMemo, useState, memo } from 'react';
 import { MatrixGrid } from './matrix-grid.component';
 import { useMatrix, useMatrixMutations, useMatrixStats } from './use-matrix';
 import { ErrorState } from '../ui/error-boundary';
@@ -347,8 +347,8 @@ export const MatrixListSkeleton: FC = () => (
             </div>
           ))}
           {[...Array(4)].map((_, rowIndex) => (
-            <>
-              <div key={`row-label-${rowIndex}`} className="flex items-center gap-2 h-10">
+            <React.Fragment key={`row-${rowIndex}`}>
+              <div className="flex items-center gap-2 h-10">
                 <div className="w-8 h-8 rounded-full bg-newBgColorInner animate-pulse" />
                 <div className="w-20 h-4 rounded bg-newBgColorInner animate-pulse" />
               </div>
@@ -358,7 +358,7 @@ export const MatrixListSkeleton: FC = () => (
                   className="w-8 h-8 rounded border-2 border-newBgColorInner bg-newBgColor animate-pulse mx-auto"
                 />
               ))}
-            </>
+            </React.Fragment>
           ))}
         </div>
       </div>

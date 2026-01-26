@@ -8,12 +8,14 @@ import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
  * Default SWR configuration for AXON
  * - Optimized for dashboard-style data that doesn't need frequent updates
  * - Prevents unnecessary refetches on focus/reconnect
+ * - keepPreviousData prevents content flash during refetch
  */
 export const defaultSwrConfig: SWRConfiguration = {
   revalidateOnFocus: false,
   revalidateOnReconnect: false,
   revalidateIfStale: false,
   dedupingInterval: 2000, // Dedupe requests within 2s window
+  keepPreviousData: true, // Prevents content flash during refetch
 };
 
 /**
