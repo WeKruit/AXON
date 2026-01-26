@@ -1,6 +1,6 @@
 'use client';
 
-import { FC, memo, useCallback, useMemo, useState } from 'react';
+import React, { FC, memo, useCallback, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { MatrixCell, MatrixHeaderCell, MatrixCellSkeleton } from './matrix-cell.component';
 import { CheckIcon, GridIcon, StarFilledIcon, LinkIcon, UnlinkIcon } from '../ui/icons';
@@ -10,8 +10,6 @@ import type {
   SoulIntegrationMapping,
   MatrixData,
   MatrixFilters,
-  getCellKey,
-  buildCellMap,
 } from './types';
 
 export interface MatrixGridProps {
@@ -285,10 +283,9 @@ export const MatrixGrid: FC<MatrixGridProps> = memo(({
 
             {/* Soul rows */}
             {souls.map((soul) => (
-              <>
+              <React.Fragment key={soul.id}>
                 {/* Soul header (row label) */}
                 <MatrixHeaderCell
-                  key={`soul-${soul.id}`}
                   label={soul.name}
                   subtitle={soul.persona?.name}
                   type="soul"
@@ -312,7 +309,7 @@ export const MatrixGrid: FC<MatrixGridProps> = memo(({
                     />
                   );
                 })}
-              </>
+              </React.Fragment>
             ))}
           </div>
         </div>
@@ -357,8 +354,8 @@ const MatrixGridSkeleton: FC = () => (
 
         {/* Data rows */}
         {[...Array(4)].map((_, rowIndex) => (
-          <>
-            <div key={`row-${rowIndex}`} className="flex items-center gap-2 h-10">
+          <React.Fragment key={`row-${rowIndex}`}>
+            <div className="flex items-center gap-2 h-10">
               <div className="w-8 h-8 rounded-full bg-newBgLineColor animate-pulse" />
               <div className="flex-1">
                 <div className="w-20 h-4 rounded bg-newBgLineColor animate-pulse" />
@@ -367,7 +364,7 @@ const MatrixGridSkeleton: FC = () => (
             {[...Array(6)].map((_, colIndex) => (
               <MatrixCellSkeleton key={`cell-${rowIndex}-${colIndex}`} />
             ))}
-          </>
+          </React.Fragment>
         ))}
       </div>
     </div>
