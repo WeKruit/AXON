@@ -9,6 +9,7 @@ import { ErrorState } from '../ui/error-boundary';
 import { PlusIcon, TrashIcon, SoulIcon } from '../ui/icons';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { deleteDialog } from '@gitroom/react/helpers/delete.dialog';
+import { useSoulContextOptional } from '../context/soul-context';
 import type { Soul, CreateSoulDto } from '../types';
 import { CreateSoulModal } from './create-soul-modal';
 

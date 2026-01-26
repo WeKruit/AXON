@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { FirestoreService, FirestoreQueryOptions } from '../../firestore.service';
-import { Soul, CreateSoulDto, UpdateSoulDto, SoulListQueryDto } from '@gitroom/nestjs-libraries/dtos/axon';
+import { Soul, CreateSoulDto, UpdateSoulDto, SoulListQueryDto, SoulStatus } from '@gitroom/nestjs-libraries/dtos/axon';
 
 const COLLECTION = 'souls';
 
@@ -8,23 +8,31 @@ const COLLECTION = 'souls';
 export class SoulRepository {
   constructor(private readonly firestore: FirestoreService) {}
 
-  async create(organizationId: string, dto: CreateSoulDto): Promise<Soul> {
-    const data: Omit<Soul, 'id' | 'createdAt' | 'updatedAt'> = {
+  async create(organizationId: string, dto: CreateSoulDto & { status?: SoulStatus; accountIds?: string[] }): Promise<Soul> {
+    // Build data object, filtering out undefined values (Firestore doesn't accept undefined)
+    const data: Record<string, unknown> = {
       organizationId,
-      type: dto.type,
-      email: dto.email,
-      phone: dto.phone,
-      displayName: dto.displayName,
-      firstName: dto.firstName,
-      lastName: dto.lastName,
-      accountIds: [],
-      personaId: dto.personaId,
-      recoveryInfo: dto.recoveryInfo,
-      metadata: dto.metadata,
-      notes: dto.notes,
+      name: dto.name,
+      status: dto.status || SoulStatus.ACTIVE,
+      accountIds: dto.accountIds || [],
     };
 
-    return this.firestore.create<Soul>(COLLECTION, data);
+    // Only add optional fields if they have values
+    if (dto.description !== undefined) data.description = dto.description;
+    if (dto.personaId !== undefined) data.personaId = dto.personaId;
+    if (dto.proxyId !== undefined) data.proxyId = dto.proxyId;
+    if (dto.metadata !== undefined) data.metadata = dto.metadata;
+    // Legacy fields
+    if (dto.type !== undefined) data.type = dto.type;
+    if (dto.email !== undefined) data.email = dto.email;
+    if (dto.phone !== undefined) data.phone = dto.phone;
+    if (dto.displayName !== undefined) data.displayName = dto.displayName;
+    if (dto.firstName !== undefined) data.firstName = dto.firstName;
+    if (dto.lastName !== undefined) data.lastName = dto.lastName;
+    if (dto.recoveryInfo !== undefined) data.recoveryInfo = dto.recoveryInfo;
+    if (dto.notes !== undefined) data.notes = dto.notes;
+
+    return this.firestore.create<Soul>(COLLECTION, data as Omit<Soul, 'id' | 'createdAt' | 'updatedAt'>);
   }
 
   async findById(organizationId: string, id: string): Promise<Soul | null> {
@@ -95,15 +103,21 @@ export class SoulRepository {
     }
 
     const updateData: Partial<Soul> = {};
+    // New fields
+    if (dto.name !== undefined) updateData.name = dto.name;
+    if (dto.description !== undefined) updateData.description = dto.description;
+    if (dto.status !== undefined) updateData.status = dto.status;
+    if (dto.personaId !== undefined) updateData.personaId = dto.personaId;
+    if (dto.proxyId !== undefined) updateData.proxyId = dto.proxyId;
+    if (dto.metadata !== undefined) updateData.metadata = dto.metadata;
+    // Legacy fields
     if (dto.type !== undefined) updateData.type = dto.type;
     if (dto.email !== undefined) updateData.email = dto.email;
     if (dto.phone !== undefined) updateData.phone = dto.phone;
     if (dto.displayName !== undefined) updateData.displayName = dto.displayName;
     if (dto.firstName !== undefined) updateData.firstName = dto.firstName;
     if (dto.lastName !== undefined) updateData.lastName = dto.lastName;
-    if (dto.personaId !== undefined) updateData.personaId = dto.personaId;
     if (dto.recoveryInfo !== undefined) updateData.recoveryInfo = dto.recoveryInfo;
-    if (dto.metadata !== undefined) updateData.metadata = dto.metadata;
     if (dto.notes !== undefined) updateData.notes = dto.notes;
 
     await this.firestore.update<Soul>(COLLECTION, id, updateData);

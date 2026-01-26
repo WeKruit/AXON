@@ -1,11 +1,12 @@
 'use client';
 
-import React, { FC, useCallback, useMemo, useState, memo } from 'react';
+import { FC, useCallback, useMemo, useState, useEffect } from 'react';
 import { MatrixGrid } from './matrix-grid.component';
 import { useMatrix, useMatrixMutations, useMatrixStats } from './use-matrix';
 import { ErrorState } from '../ui/error-boundary';
 import { FilterIcon, GridIcon, RefreshIcon } from '../ui/icons';
 import { useToaster } from '@gitroom/react/toaster/toaster';
+import { useSoulContextOptional } from '../context/soul-context';
 import type { MatrixFilters, Platform } from './types';
 
 const PLATFORM_OPTIONS: { value: Platform | ''; label: string }[] = [
@@ -25,9 +26,21 @@ export const MatrixListComponent: FC = () => {
   const { toggleMapping, setPrimary, bulkOperation } = useMatrixMutations();
   const stats = useMatrixStats(data);
   const toaster = useToaster();
+  const soulContext = useSoulContextOptional();
 
   const [filters, setFilters] = useState<MatrixFilters>({});
   const [showFilters, setShowFilters] = useState(false);
+
+  // Sync Soul context with filters - when user selects a Soul in the header,
+  // automatically filter the matrix to that Soul
+  useEffect(() => {
+    if (soulContext) {
+      setFilters((prev) => ({
+        ...prev,
+        soulId: soulContext.selectedSoulId || undefined,
+      }));
+    }
+  }, [soulContext?.selectedSoulId]);
 
   const handleToggleMapping = useCallback(
     async (soulId: string, integrationId: string) => {
@@ -45,19 +58,19 @@ export const MatrixListComponent: FC = () => {
   const handleSetPrimary = useCallback(
     async (soulId: string, integrationId: string) => {
       try {
+        // Find the mapping by soulId and integrationId
         const mapping = data?.mappings.find(
           (m) => m.soulId === soulId && m.integrationId === integrationId
         );
-        await setPrimary({
-          soulId,
-          integrationId,
-          isPrimary: !mapping?.isPrimary,
-        });
+
+        if (!mapping) {
+          toaster.show('Connection must exist before setting as primary', 'warning');
+          return;
+        }
+
+        await setPrimary(mapping.id);
         await mutate();
-        toaster.show(
-          mapping?.isPrimary ? 'Primary status removed' : 'Set as primary',
-          'success'
-        );
+        toaster.show('Set as primary', 'success');
       } catch (err) {
         console.error('Failed to set primary:', err);
         toaster.show('Failed to update primary status', 'warning');
@@ -69,10 +82,13 @@ export const MatrixListComponent: FC = () => {
   const handleBulkConnect = useCallback(
     async (soulIds: string[], integrationIds: string[]) => {
       try {
+        // Build mappings array from cartesian product of soulIds and integrationIds
+        const mappings = soulIds.flatMap((soulId) =>
+          integrationIds.map((integrationId) => ({ soulId, integrationId }))
+        );
         await bulkOperation({
-          operation: 'connect',
-          soulIds,
-          integrationIds,
+          operation: 'create',
+          mappings,
         });
         await mutate();
         toaster.show('Connections created successfully', 'success');
@@ -87,10 +103,13 @@ export const MatrixListComponent: FC = () => {
   const handleBulkDisconnect = useCallback(
     async (soulIds: string[], integrationIds: string[]) => {
       try {
+        // Build mappings array from cartesian product of soulIds and integrationIds
+        const mappings = soulIds.flatMap((soulId) =>
+          integrationIds.map((integrationId) => ({ soulId, integrationId }))
+        );
         await bulkOperation({
-          operation: 'disconnect',
-          soulIds,
-          integrationIds,
+          operation: 'delete',
+          mappings,
         });
         await mutate();
         toaster.show('Connections removed successfully', 'success');
@@ -287,81 +306,9 @@ interface StatCardProps {
   value: number | string;
 }
 
-const StatCard: FC<StatCardProps> = memo(({ label, value }) => (
+const StatCard: FC<StatCardProps> = ({ label, value }) => (
   <div className="bg-newBgLineColor rounded-lg p-4">
     <p className="text-xs text-textItemBlur mb-1">{label}</p>
     <p className="text-2xl font-semibold">{value}</p>
-  </div>
-));
-
-StatCard.displayName = 'StatCard';
-
-/**
- * Skeleton loader for Matrix List
- * Exported for use with Suspense boundaries
- */
-export const MatrixListSkeleton: FC = () => (
-  <div className="flex-1 bg-newBgColorInner p-6">
-    {/* Header skeleton */}
-    <div className="flex items-center justify-between mb-6">
-      <div>
-        <div className="h-8 w-48 bg-newBgLineColor rounded animate-pulse mb-2" />
-        <div className="h-4 w-72 bg-newBgLineColor rounded animate-pulse" />
-      </div>
-      <div className="flex items-center gap-2">
-        <div className="h-10 w-24 bg-newBgLineColor rounded animate-pulse" />
-        <div className="h-10 w-10 bg-newBgLineColor rounded animate-pulse" />
-      </div>
-    </div>
-
-    {/* Stats skeleton */}
-    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-      {[...Array(5)].map((_, i) => (
-        <div key={i} className="bg-newBgLineColor rounded-lg p-4 animate-pulse">
-          <div className="h-3 w-16 bg-newBgColorInner rounded mb-2" />
-          <div className="h-8 w-12 bg-newBgColorInner rounded" />
-        </div>
-      ))}
-    </div>
-
-    {/* Grid skeleton */}
-    <div className="bg-newBgLineColor rounded-lg p-4">
-      <div className="flex items-center gap-6 mb-4">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-newBgColorInner animate-pulse" />
-            <div className="w-16 h-4 rounded bg-newBgColorInner animate-pulse" />
-          </div>
-        ))}
-      </div>
-      <div className="overflow-x-auto pb-4">
-        <div
-          className="grid gap-2"
-          style={{ gridTemplateColumns: '200px repeat(6, 48px)' }}
-        >
-          <div className="h-24" />
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-24 flex flex-col justify-end pb-2">
-              <div className="w-6 h-6 rounded-full bg-newBgColorInner animate-pulse mx-auto" />
-              <div className="w-8 h-3 rounded bg-newBgColorInner animate-pulse mx-auto mt-1" />
-            </div>
-          ))}
-          {[...Array(4)].map((_, rowIndex) => (
-            <React.Fragment key={`row-${rowIndex}`}>
-              <div className="flex items-center gap-2 h-10">
-                <div className="w-8 h-8 rounded-full bg-newBgColorInner animate-pulse" />
-                <div className="w-20 h-4 rounded bg-newBgColorInner animate-pulse" />
-              </div>
-              {[...Array(6)].map((_, colIndex) => (
-                <div
-                  key={`cell-${rowIndex}-${colIndex}`}
-                  className="w-8 h-8 rounded border-2 border-newBgColorInner bg-newBgColor animate-pulse mx-auto"
-                />
-              ))}
-            </React.Fragment>
-          ))}
-        </div>
-      </div>
-    </div>
   </div>
 );

@@ -7,5 +7,6 @@ export const metadata: Metadata = {
 };
 
 export default function AxonPage() {
-  redirect('/axon/souls');
+  // Matrix is the primary workspace - redirect to it by default
+  redirect('/axon/matrix');
 }

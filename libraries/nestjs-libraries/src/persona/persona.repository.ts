@@ -88,24 +88,33 @@ export class PersonaRepository {
    * Find personas by filter
    */
   async findByFilter(filter: PersonaFilter): Promise<Persona[]> {
-    let query: FirebaseFirestore.Query = this.collection;
+    try {
+      let query: FirebaseFirestore.Query = this.collection;
 
-    if (filter.organizationId) {
-      query = query.where('organizationId', '==', filter.organizationId);
+      if (filter.organizationId) {
+        query = query.where('organizationId', '==', filter.organizationId);
+      }
+
+      if (filter.userId) {
+        query = query.where('userId', '==', filter.userId);
+      }
+
+      if (filter.isActive !== undefined) {
+        query = query.where('isActive', '==', filter.isActive);
+      }
+
+      query = query.orderBy('createdAt', 'desc');
+
+      const snapshot = await query.get();
+      return snapshot.docs.map((doc) => this.docToPersona(doc));
+    } catch (error: any) {
+      // Handle case where collection doesn't exist or index is missing
+      if (error.code === 5 || error.message?.includes('NOT_FOUND')) {
+        this.logger.warn(`Collection '${this.collectionName}' not found or index missing, returning empty result`);
+        return [];
+      }
+      throw error;
     }
-
-    if (filter.userId) {
-      query = query.where('userId', '==', filter.userId);
-    }
-
-    if (filter.isActive !== undefined) {
-      query = query.where('isActive', '==', filter.isActive);
-    }
-
-    query = query.orderBy('createdAt', 'desc');
-
-    const snapshot = await query.get();
-    return snapshot.docs.map((doc) => this.docToPersona(doc));
   }
 
   /**

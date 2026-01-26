@@ -71,84 +71,66 @@ export class SoulMetadata {
   language?: string;
 }
 
+// Soul status enum
+export enum SoulStatus {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+  WARMING = 'warming',
+  SUSPENDED = 'suspended',
+}
+
 // Soul entity interface (Firestore document)
 export interface Soul extends FirestoreDocument {
   organizationId: string;
-  type: SoulType;
+  name: string;
+  description?: string;
+  status: SoulStatus;
+  personaId?: string;
+  proxyId?: string;
+  accountIds: string[];
+  metadata?: Record<string, unknown>;
+  // Legacy fields
+  type?: SoulType;
   email?: string;
   phone?: string;
   displayName?: string;
   firstName?: string;
   lastName?: string;
-  accountIds: string[];
-  personaId?: string;
   recoveryInfo?: RecoveryInfo;
-  metadata?: SoulMetadata;
   notes?: string;
 }
 
-// Create Soul DTO
+// Create Soul DTO - Simplified model for AXON
 export class CreateSoulDto {
-  @ApiProperty({ description: 'Type of soul identity', enum: SoulType })
-  @IsEnum(SoulType)
-  type: SoulType;
-
-  @ApiPropertyOptional({ description: 'Primary email address' })
-  @IsEmail()
-  @IsOptional()
-  email?: string;
-
-  @ApiPropertyOptional({ description: 'Primary phone number' })
-  @IsPhoneNumber()
-  @IsOptional()
-  phone?: string;
-
-  @ApiPropertyOptional({ description: 'Display name' })
+  @ApiProperty({ description: 'Name of the soul (identity container)' })
   @IsString()
   @MinLength(1)
   @MaxLength(100)
-  @IsOptional()
-  displayName?: string;
+  name: string;
 
-  @ApiPropertyOptional({ description: 'First name' })
+  @ApiPropertyOptional({ description: 'Description of this soul' })
   @IsString()
-  @MaxLength(50)
+  @MaxLength(500)
   @IsOptional()
-  firstName?: string;
-
-  @ApiPropertyOptional({ description: 'Last name' })
-  @IsString()
-  @MaxLength(50)
-  @IsOptional()
-  lastName?: string;
+  description?: string;
 
   @ApiPropertyOptional({ description: 'Associated persona ID' })
-  @IsUUID()
+  @IsString()
   @IsOptional()
   personaId?: string;
 
-  @ApiPropertyOptional({ description: 'Recovery information' })
-  @ValidateNested()
-  @Type(() => RecoveryInfo)
+  @ApiPropertyOptional({ description: 'Default proxy ID' })
+  @IsString()
   @IsOptional()
-  recoveryInfo?: RecoveryInfo;
+  proxyId?: string;
 
   @ApiPropertyOptional({ description: 'Additional metadata' })
-  @ValidateNested()
-  @Type(() => SoulMetadata)
+  @IsObject()
   @IsOptional()
-  metadata?: SoulMetadata;
+  metadata?: Record<string, unknown>;
 
-  @ApiPropertyOptional({ description: 'Internal notes' })
-  @IsString()
-  @MaxLength(1000)
-  @IsOptional()
-  notes?: string;
-}
-
-// Update Soul DTO
-export class UpdateSoulDto {
-  @ApiPropertyOptional({ description: 'Type of soul identity', enum: SoulType })
+  // Legacy fields for backward compatibility
+  @ApiPropertyOptional({ description: 'Type of soul identity (legacy)', enum: SoulType })
   @IsEnum(SoulType)
   @IsOptional()
   type?: SoulType;
@@ -163,9 +145,8 @@ export class UpdateSoulDto {
   @IsOptional()
   phone?: string;
 
-  @ApiPropertyOptional({ description: 'Display name' })
+  @ApiPropertyOptional({ description: 'Display name (legacy - use name instead)' })
   @IsString()
-  @MinLength(1)
   @MaxLength(100)
   @IsOptional()
   displayName?: string;
@@ -182,22 +163,93 @@ export class UpdateSoulDto {
   @IsOptional()
   lastName?: string;
 
-  @ApiPropertyOptional({ description: 'Associated persona ID' })
-  @IsUUID()
-  @IsOptional()
-  personaId?: string;
-
   @ApiPropertyOptional({ description: 'Recovery information' })
   @ValidateNested()
   @Type(() => RecoveryInfo)
   @IsOptional()
   recoveryInfo?: RecoveryInfo;
 
-  @ApiPropertyOptional({ description: 'Additional metadata' })
-  @ValidateNested()
-  @Type(() => SoulMetadata)
+  @ApiPropertyOptional({ description: 'Internal notes' })
+  @IsString()
+  @MaxLength(1000)
   @IsOptional()
-  metadata?: SoulMetadata;
+  notes?: string;
+}
+
+// Update Soul DTO
+export class UpdateSoulDto {
+  @ApiPropertyOptional({ description: 'Name of the soul' })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  @IsOptional()
+  name?: string;
+
+  @ApiPropertyOptional({ description: 'Description' })
+  @IsString()
+  @MaxLength(500)
+  @IsOptional()
+  description?: string;
+
+  @ApiPropertyOptional({ description: 'Status', enum: SoulStatus })
+  @IsEnum(SoulStatus)
+  @IsOptional()
+  status?: SoulStatus;
+
+  @ApiPropertyOptional({ description: 'Associated persona ID' })
+  @IsString()
+  @IsOptional()
+  personaId?: string;
+
+  @ApiPropertyOptional({ description: 'Default proxy ID' })
+  @IsString()
+  @IsOptional()
+  proxyId?: string;
+
+  @ApiPropertyOptional({ description: 'Additional metadata' })
+  @IsObject()
+  @IsOptional()
+  metadata?: Record<string, unknown>;
+
+  // Legacy fields
+  @ApiPropertyOptional({ description: 'Type of soul identity (legacy)', enum: SoulType })
+  @IsEnum(SoulType)
+  @IsOptional()
+  type?: SoulType;
+
+  @ApiPropertyOptional({ description: 'Primary email address' })
+  @IsEmail()
+  @IsOptional()
+  email?: string;
+
+  @ApiPropertyOptional({ description: 'Primary phone number' })
+  @IsPhoneNumber()
+  @IsOptional()
+  phone?: string;
+
+  @ApiPropertyOptional({ description: 'Display name (legacy)' })
+  @IsString()
+  @MaxLength(100)
+  @IsOptional()
+  displayName?: string;
+
+  @ApiPropertyOptional({ description: 'First name' })
+  @IsString()
+  @MaxLength(50)
+  @IsOptional()
+  firstName?: string;
+
+  @ApiPropertyOptional({ description: 'Last name' })
+  @IsString()
+  @MaxLength(50)
+  @IsOptional()
+  lastName?: string;
+
+  @ApiPropertyOptional({ description: 'Recovery information' })
+  @ValidateNested()
+  @Type(() => RecoveryInfo)
+  @IsOptional()
+  recoveryInfo?: RecoveryInfo;
 
   @ApiPropertyOptional({ description: 'Internal notes' })
   @IsString()
@@ -214,8 +266,39 @@ export class SoulResponseDto {
   @ApiProperty({ description: 'Organization ID' })
   organizationId: string;
 
-  @ApiProperty({ description: 'Type of soul identity', enum: SoulType })
-  type: SoulType;
+  @ApiProperty({ description: 'Name of the soul' })
+  name: string;
+
+  @ApiPropertyOptional({ description: 'Description' })
+  description?: string;
+
+  @ApiProperty({ description: 'Status', enum: SoulStatus })
+  status: SoulStatus;
+
+  @ApiPropertyOptional({ description: 'Associated persona ID' })
+  personaId?: string;
+
+  @ApiPropertyOptional({ description: 'Default proxy ID' })
+  proxyId?: string;
+
+  @ApiProperty({ description: 'Associated account IDs', type: [String] })
+  accountIds: string[];
+
+  @ApiPropertyOptional({ description: 'Number of associated accounts' })
+  accountCount?: number;
+
+  @ApiPropertyOptional({ description: 'Additional metadata' })
+  metadata?: Record<string, unknown>;
+
+  @ApiProperty({ description: 'Created timestamp' })
+  createdAt: Date;
+
+  @ApiProperty({ description: 'Updated timestamp' })
+  updatedAt: Date;
+
+  // Legacy fields for backward compatibility
+  @ApiPropertyOptional({ description: 'Type of soul identity (legacy)', enum: SoulType })
+  type?: SoulType;
 
   @ApiPropertyOptional({ description: 'Primary email address' })
   email?: string;
@@ -223,7 +306,7 @@ export class SoulResponseDto {
   @ApiPropertyOptional({ description: 'Primary phone number' })
   phone?: string;
 
-  @ApiPropertyOptional({ description: 'Display name' })
+  @ApiPropertyOptional({ description: 'Display name (legacy)' })
   displayName?: string;
 
   @ApiPropertyOptional({ description: 'First name' })
@@ -231,21 +314,6 @@ export class SoulResponseDto {
 
   @ApiPropertyOptional({ description: 'Last name' })
   lastName?: string;
-
-  @ApiProperty({ description: 'Associated account IDs', type: [String] })
-  accountIds: string[];
-
-  @ApiPropertyOptional({ description: 'Associated persona ID' })
-  personaId?: string;
-
-  @ApiPropertyOptional({ description: 'Number of associated accounts' })
-  accountCount?: number;
-
-  @ApiProperty({ description: 'Created timestamp' })
-  createdAt: Date;
-
-  @ApiProperty({ description: 'Updated timestamp' })
-  updatedAt: Date;
 }
 
 // Soul List Query DTO

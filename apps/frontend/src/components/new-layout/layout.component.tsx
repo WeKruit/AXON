@@ -15,7 +15,8 @@ import dynamic from 'next/dynamic';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
 import { useSearchParams } from 'next/navigation';
-import useSWR from 'swr';
+import useSWR, { SWRConfig } from 'swr';
+import { globalSwrConfig } from '@gitroom/frontend/lib/swr-config';
 import { CheckPayment } from '@gitroom/frontend/components/layout/check.payment';
 import { ToolTip } from '@gitroom/frontend/components/layout/top.tip';
 import { ShowMediaBoxModal } from '@gitroom/frontend/components/media/media.component';
@@ -34,11 +35,23 @@ import { Title } from '@gitroom/frontend/components/layout/title';
 import { TopMenu } from '@gitroom/frontend/components/layout/top.menu';
 import { LanguageComponent } from '@gitroom/frontend/components/layout/language.component';
 import { ChromeExtensionComponent } from '@gitroom/frontend/components/layout/chrome.extension.component';
-import NotificationComponent from '@gitroom/frontend/components/notifications/notification.component';
 import { OrganizationSelector } from '@gitroom/frontend/components/layout/organization.selector';
 import { PreConditionComponent } from '@gitroom/frontend/components/layout/pre-condition.component';
 import { AttachToFeedbackIcon } from '@gitroom/frontend/components/new-layout/sentry.feedback.component';
 import { FirstBillingComponent } from '@gitroom/frontend/components/billing/first.billing.component';
+import { SoulContextProvider } from '@gitroom/frontend/components/axon/context/soul-context';
+
+// Lazy load GlobalSoulSwitcher to avoid fetching souls data on initial render
+const GlobalSoulSwitcher = dynamic(
+  () => import('@gitroom/frontend/components/axon/ui/global-soul-switcher').then(m => ({ default: m.GlobalSoulSwitcher })),
+  { ssr: false }
+);
+
+// Lazy load NotificationComponent to reduce initial bundle
+const LazyNotificationComponent = dynamic(
+  () => import('@gitroom/frontend/components/notifications/notification.component'),
+  { ssr: false }
+);
 
 const jakartaSans = Plus_Jakarta_Sans({
   weight: ['600', '500', '700'],
@@ -123,6 +136,8 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
   if (isLoading || !user) return <LayoutSkeleton />;
 
   return (
+    <SWRConfig value={globalSwrConfig}>
+    <SoulContextProvider>
     <ContextWrapper user={user}>
       <CopilotKit
         credentials="include"
@@ -172,6 +187,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                       </div>
                       <div className="flex gap-[20px] text-textItemBlur">
                         <OrganizationSelector />
+                        <GlobalSoulSwitcher />
                         <div className="hover:text-newTextColor">
                           <ModeComponent />
                         </div>
@@ -180,7 +196,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                         <ChromeExtensionComponent />
                         <div className="w-[1px] h-[20px] bg-blockSeparator" />
                         <AttachToFeedbackIcon />
-                        <NotificationComponent />
+                        <LazyNotificationComponent />
                       </div>
                     </div>
                     <div className="flex flex-1 gap-[1px]">{children}</div>
@@ -192,5 +208,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
         </MantineWrapper>
       </CopilotKit>
     </ContextWrapper>
+    </SoulContextProvider>
+    </SWRConfig>
   );
 };

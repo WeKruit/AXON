@@ -28,8 +28,8 @@ import {
   RegeneratePersonaDto,
 } from '@gitroom/nestjs-libraries/dtos/personas/persona.dto';
 
-@ApiTags('Personas')
-@Controller('/personas')
+@ApiTags('AXON - Personas')
+@Controller('/axon/personas')
 export class PersonasController {
   constructor(private readonly personaService: PersonaService) {}
 
@@ -73,7 +73,8 @@ export class PersonasController {
   @ApiResponse({ status: 200, description: 'List of personas' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async getPersonas(@GetOrgFromRequest() org: Organization) {
-    return { personas: await this.personaService.getByOrganization(org.id) };
+    const personas = await this.personaService.getByOrganization(org.id);
+    return { data: personas, hasMore: false };
   }
 
   @Get('/active')
@@ -81,9 +82,8 @@ export class PersonasController {
   @ApiResponse({ status: 200, description: 'List of active personas' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async getActivePersonas(@GetOrgFromRequest() org: Organization) {
-    return {
-      personas: await this.personaService.getActiveByOrganization(org.id),
-    };
+    const personas = await this.personaService.getActiveByOrganization(org.id);
+    return { data: personas, hasMore: false };
   }
 
   @Get('/:id')

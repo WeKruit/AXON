@@ -524,4 +524,19 @@ export class MatrixRepository {
       orderBy: [{ soulId: 'asc' }, { isPrimary: 'desc' }, { priority: 'asc' }],
     });
   }
+
+  /**
+   * Get all mappings for an organization without integration data (lean/faster query)
+   * Use this when integration data is already fetched separately
+   */
+  async getAllMappingsLean(
+    organizationId: string
+  ): Promise<SoulIntegrationMapping[]> {
+    return this._soulIntegrationMapping.model.soulIntegrationMapping.findMany({
+      where: {
+        organizationId,
+      },
+      orderBy: [{ soulId: 'asc' }, { isPrimary: 'desc' }, { priority: 'asc' }],
+    });
+  }
 }
