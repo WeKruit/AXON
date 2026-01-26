@@ -419,10 +419,32 @@ export function usePreloadFunctions() {
     preload(AXON_CACHE_KEYS.proxies, fetcher);
   }, [fetch]);
 
+  const preloadIntegrations = useCallback(() => {
+    const fetcher = async () => {
+      const response = await fetch(AXON_CACHE_KEYS.integrations);
+      if (!response.ok) throw new Error('Failed to fetch integrations');
+      const result = await response.json();
+      return result?.integrations ?? result ?? [];
+    };
+    preload(AXON_CACHE_KEYS.integrations, fetcher);
+  }, [fetch]);
+
+  const preloadMatrixMappings = useCallback(() => {
+    const fetcher = async () => {
+      const response = await fetch(AXON_CACHE_KEYS.matrixMappings);
+      if (!response.ok) throw new Error('Failed to fetch mappings');
+      const result = await response.json();
+      return result?.data ?? result ?? [];
+    };
+    preload(AXON_CACHE_KEYS.matrixMappings, fetcher);
+  }, [fetch]);
+
   return {
     preloadSouls,
     preloadAccounts,
     preloadPersonas,
     preloadProxies,
+    preloadIntegrations,
+    preloadMatrixMappings,
   };
 }
