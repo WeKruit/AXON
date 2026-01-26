@@ -9,6 +9,7 @@ import {
   OrderByDirection,
   WriteBatch,
   Transaction,
+  getFirestore,
 } from 'firebase-admin/firestore';
 
 export interface FirestoreQueryOptions {
@@ -51,6 +52,13 @@ export class FirestoreService implements OnModuleInit {
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
     const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
+    // Debug logging
+    this.logger.log(`=== Firestore Debug Info ===`);
+    this.logger.log(`Project ID: ${projectId}`);
+    this.logger.log(`Client Email: ${clientEmail}`);
+    this.logger.log(`Private Key exists: ${!!privateKey}`);
+    this.logger.log(`Private Key length: ${privateKey?.length || 0}`);
+
     if (!projectId || !clientEmail || !privateKey) {
       this.logger.warn(
         'Firebase configuration missing. Firestore features will be disabled. ' +
@@ -62,18 +70,33 @@ export class FirestoreService implements OnModuleInit {
     try {
       // Check if Firebase app already exists (from auth provider)
       const existingApps = admin.apps;
+      this.logger.log(`Existing Firebase apps: ${existingApps.length}`);
+
+      let app: admin.app.App;
       if (existingApps.length > 0) {
-        this.db = existingApps[0].firestore();
+        app = existingApps[0]!;
+        this.logger.log(`Using existing Firebase app: ${app.name}`);
       } else {
-        const app = admin.initializeApp({
+        app = admin.initializeApp({
           credential: admin.credential.cert({
             projectId,
             clientEmail,
             privateKey,
           }),
         });
-        this.db = app.firestore();
+        this.logger.log(`Created new Firebase app: ${app.name}`);
       }
+
+      // Use the default Firestore database
+      this.db = getFirestore(app);
+      
+      // Configure settings
+      this.db.settings({
+        ignoreUndefinedProperties: true,
+      });
+      
+      this.logger.log(`Firestore configured for project: ${projectId}`);
+
       this.initialized = true;
       this.logger.log('Firestore initialized successfully');
 
@@ -94,12 +117,37 @@ export class FirestoreService implements OnModuleInit {
 
   private async testConnection(): Promise<void> {
     try {
-      // Try to list collections to test connection
+      this.logger.log(`Testing Firestore connection...`);
+      this.logger.log(`Project: ${process.env.FIREBASE_PROJECT_ID}`);
+
+      // Try a simple document read first (more reliable than listCollections)
+      const testRef = this.db.collection('_connection_test').doc('test');
+      await testRef.set({ timestamp: admin.firestore.Timestamp.now(), test: true });
+      const doc = await testRef.get();
+      
+      if (doc.exists) {
+        this.logger.log(`✅ Firestore connection verified! Write/read test passed.`);
+        // Clean up test document
+        await testRef.delete();
+      }
+
+      // Also try to list collections
       const collections = await this.db.listCollections();
-      this.logger.log(`Firestore connection verified. Found ${collections.length} collections.`);
+      this.logger.log(`Found ${collections.length} collections in Firestore.`);
+
+      if (collections.length > 0) {
+        const collectionNames = collections.map(c => c.id).join(', ');
+        this.logger.log(`Collections: ${collectionNames}`);
+      }
     } catch (error: any) {
-      this.logger.error(`Firestore connection test failed: ${error?.message || error}`);
+      this.logger.error(`Firestore connection test failed!`);
+      this.logger.error(`Error code: ${error?.code}`);
+      this.logger.error(`Error message: ${error?.message}`);
+      this.logger.error(`Error details: ${JSON.stringify(error?.details || {})}`);
+      this.logger.error(`Full error: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`);
       this.logger.error('Please ensure Firestore is enabled in Native mode in Firebase Console');
+      this.logger.error(`Check: https://console.firebase.google.com/project/${process.env.FIREBASE_PROJECT_ID}/firestore`);
+      this.logger.error('Also ensure the Firestore API is enabled: https://console.cloud.google.com/apis/library/firestore.googleapis.com');
     }
   }
 

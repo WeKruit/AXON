@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, ReactNode, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useMemo, useEffect } from 'react';
 import type { Soul } from '../types';
 
 interface SoulContextValue {
@@ -18,6 +18,12 @@ interface SoulContextValue {
 }
 
 const SoulContext = createContext<SoulContextValue | null>(null);
+
+// Helper to get stored soul ID from localStorage (client-side only)
+function getStoredSoulId(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('axon-selected-soul-id');
+}
 
 export function useSoulContext(): SoulContextValue {
   const context = useContext(SoulContext);
@@ -41,6 +47,14 @@ interface SoulContextProviderProps {
 export function SoulContextProvider({ children, initialSoulId }: SoulContextProviderProps) {
   const [selectedSoul, setSelectedSoul] = useState<Soul | null>(null);
   const [selectedSoulId, setSelectedSoulId] = useState<string | null>(initialSoulId || null);
+
+  // Hydrate from localStorage on mount (client-side only)
+  useEffect(() => {
+    const storedSoulId = getStoredSoulId();
+    if (storedSoulId && !initialSoulId) {
+      setSelectedSoulId(storedSoulId);
+    }
+  }, [initialSoulId]);
 
   const selectSoul = useCallback((soul: Soul | null) => {
     setSelectedSoul(soul);

@@ -15,6 +15,7 @@ export class SoulRepository {
       name: dto.name,
       status: dto.status || SoulStatus.ACTIVE,
       accountIds: dto.accountIds || [],
+      deletedAt: null, // Explicitly set to null so queries for deletedAt == null work
     };
 
     // Only add optional fields if they have values
