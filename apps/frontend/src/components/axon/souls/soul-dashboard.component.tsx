@@ -40,7 +40,8 @@ export const SoulDashboardComponent: FC<SoulDashboardProps> = ({ soulId }) => {
       if (!soul) return;
       try {
         await updateSoul(soul.id, { status });
-        await mutateSoul();
+        // Force revalidation bypassing deduplication
+        await mutateSoul(undefined, { revalidate: true });
         toaster.show(`Soul status updated to ${status}`, 'success');
       } catch (error) {
         toaster.show('Failed to update status', 'warning');
@@ -52,8 +53,12 @@ export const SoulDashboardComponent: FC<SoulDashboardProps> = ({ soulId }) => {
   const handleAddAccount = useCallback(
     async (data: CreateAccountDto) => {
       try {
-        await createAccount({ ...data, soulId });
-        await mutateAccounts();
+        const newAccount = await createAccount({ ...data, soulId });
+        // Force revalidation bypassing deduplication
+        await mutateAccounts(
+          (currentData) => currentData ? [newAccount, ...currentData] : [newAccount],
+          { revalidate: true }
+        );
         setIsAddAccountOpen(false);
         toaster.show('Account added successfully', 'success');
       } catch (error) {
@@ -73,7 +78,11 @@ export const SoulDashboardComponent: FC<SoulDashboardProps> = ({ soulId }) => {
 
       try {
         await deleteAccount(account.id);
-        await mutateAccounts();
+        // Force revalidation bypassing deduplication
+        await mutateAccounts(
+          (currentData) => currentData?.filter((a) => a.id !== account.id) ?? [],
+          { revalidate: true }
+        );
         toaster.show('Account removed successfully', 'success');
       } catch (error) {
         toaster.show('Failed to remove account', 'warning');

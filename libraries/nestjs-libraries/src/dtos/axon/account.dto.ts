@@ -8,7 +8,6 @@ import {
   IsObject,
   MinLength,
   MaxLength,
-  IsUUID,
   IsUrl,
   IsBoolean,
 } from 'class-validator';
@@ -146,7 +145,7 @@ export interface Account extends FirestoreDocument {
 // Create Account DTO
 export class CreateAccountDto {
   @ApiProperty({ description: 'Soul ID this account belongs to' })
-  @IsUUID()
+  @IsString()
   soulId: string;
 
   @ApiProperty({ description: 'Platform', enum: Platform })
@@ -198,7 +197,7 @@ export class CreateAccountDto {
   credentials?: AccountCredentials;
 
   @ApiPropertyOptional({ description: 'Assigned proxy ID' })
-  @IsUUID()
+  @IsString()
   @IsOptional()
   proxyId?: string;
 
@@ -269,7 +268,7 @@ export class UpdateAccountDto {
   credentials?: AccountCredentials;
 
   @ApiPropertyOptional({ description: 'Assigned proxy ID' })
-  @IsUUID()
+  @IsString()
   @IsOptional()
   proxyId?: string;
 
@@ -365,12 +364,12 @@ export class AccountListQueryDto {
   status?: AccountStatus;
 
   @ApiPropertyOptional({ description: 'Filter by soul ID' })
-  @IsUUID()
+  @IsString()
   @IsOptional()
   soulId?: string;
 
   @ApiPropertyOptional({ description: 'Filter by proxy ID' })
-  @IsUUID()
+  @IsString()
   @IsOptional()
   proxyId?: string;
 
@@ -398,7 +397,7 @@ export class AccountListQueryDto {
 // Bulk Import DTO
 export class BulkImportAccountDto {
   @ApiProperty({ description: 'Soul ID for all imported accounts' })
-  @IsUUID()
+  @IsString()
   soulId: string;
 
   @ApiProperty({ description: 'Platform for all imported accounts', enum: Platform })
@@ -437,7 +436,7 @@ export class UpdateAccountStatusDto {
 // Assign Proxy DTO
 export class AssignAccountProxyDto {
   @ApiPropertyOptional({ description: 'Proxy ID to assign (null to unassign)' })
-  @IsUUID()
+  @IsString()
   @IsOptional()
   proxyId?: string | null;
 }

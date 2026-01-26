@@ -44,7 +44,11 @@ export const AccountsListComponent: FC = () => {
 
       try {
         await deleteAccount(account.id);
-        await mutate();
+        // Force revalidation bypassing deduplication
+        await mutate(
+          (currentData) => currentData?.filter((a) => a.id !== account.id) ?? [],
+          { revalidate: true }
+        );
         toaster.show('Account deleted successfully', 'success');
       } catch (error) {
         toaster.show('Failed to delete account', 'warning');
