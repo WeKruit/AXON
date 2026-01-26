@@ -66,19 +66,7 @@ export const SoulsListComponent: FC = () => {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex-1 bg-newBgColorInner p-6" aria-busy="true" aria-label="Loading souls">
-        <div className="flex items-center justify-between mb-6">
-          <div className="h-8 w-32 bg-newBgLineColor rounded animate-pulse" />
-          <div className="h-10 w-32 bg-newBgLineColor rounded animate-pulse" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-48 bg-newBgLineColor rounded-lg animate-pulse" />
-          ))}
-        </div>
-      </div>
-    );
+    return <SoulsListSkeleton />;
   }
 
   return (
@@ -212,3 +200,54 @@ const SoulCard: FC<SoulCardProps> = memo(({ soul, onDelete }) => {
 });
 
 SoulCard.displayName = 'SoulCard';
+
+/**
+ * Skeleton loader for Souls List
+ * Exported for use with Suspense boundaries
+ */
+export const SoulsListSkeleton: FC = () => (
+  <div className="flex-1 bg-newBgColorInner p-6" aria-busy="true" aria-label="Loading souls">
+    <div className="flex items-center justify-between mb-6">
+      <div>
+        <div className="h-8 w-32 bg-newBgLineColor rounded animate-pulse mb-2" />
+        <div className="h-4 w-64 bg-newBgLineColor rounded animate-pulse" />
+      </div>
+      <div className="h-10 w-32 bg-newBgLineColor rounded animate-pulse" />
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {[...Array(6)].map((_, i) => (
+        <SoulCardSkeleton key={i} />
+      ))}
+    </div>
+  </div>
+);
+
+/**
+ * Skeleton for individual soul card
+ */
+const SoulCardSkeleton: FC = () => (
+  <div className="bg-newBgLineColor rounded-lg p-4 animate-pulse">
+    <div className="flex items-start justify-between mb-3">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-newBgColorInner" />
+        <div>
+          <div className="h-5 w-24 bg-newBgColorInner rounded mb-1" />
+          <div className="h-3 w-20 bg-newBgColorInner rounded" />
+        </div>
+      </div>
+      <div className="h-5 w-14 bg-newBgColorInner rounded" />
+    </div>
+    <div className="h-4 w-full bg-newBgColorInner rounded mb-2" />
+    <div className="h-4 w-3/4 bg-newBgColorInner rounded mb-3" />
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <div className="h-4 w-16 bg-newBgColorInner rounded" />
+        <div className="flex gap-1">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="w-5 h-5 rounded bg-newBgColorInner" />
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+);

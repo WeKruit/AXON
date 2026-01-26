@@ -37,6 +37,75 @@ function getCellKeyFn(soulId: string, integrationId: string): string {
   return `${soulId}-${integrationId}`;
 }
 
+/**
+ * Styles for content-visibility optimization (WEC-184)
+ * Defers rendering of off-screen rows for better performance with 500+ souls
+ * Based on rendering-content-visibility best practice
+ */
+const matrixRowStyles: React.CSSProperties = {
+  contentVisibility: 'auto',
+  containIntrinsicSize: '0 48px', // Estimated row height (48px = 40px cell + 8px gap)
+};
+
+/**
+ * Individual matrix row component with content-visibility optimization
+ * Memoized to prevent unnecessary re-renders when other rows change
+ */
+interface MatrixRowProps {
+  soul: Soul;
+  integrations: Integration[];
+  cellMap: Map<string, SoulIntegrationMapping>;
+  bulkMode: boolean;
+  selectedCells: Set<string>;
+  onToggleMapping: (soulId: string, integrationId: string) => Promise<void>;
+  onSetPrimary: (soulId: string, integrationId: string) => Promise<void>;
+  onCellSelect: (soulId: string, integrationId: string) => void;
+}
+
+const MatrixRow: FC<MatrixRowProps> = memo(({
+  soul,
+  integrations,
+  cellMap,
+  bulkMode,
+  selectedCells,
+  onToggleMapping,
+  onSetPrimary,
+  onCellSelect,
+}) => (
+  <React.Fragment>
+    {/* Soul header (row label) - using CSS grid subgrid for alignment */}
+    <div style={matrixRowStyles}>
+      <MatrixHeaderCell
+        label={soul.name}
+        subtitle={soul.persona?.name}
+        type="soul"
+      />
+    </div>
+
+    {/* Matrix cells */}
+    {integrations.map((integration) => {
+      const cellKey = getCellKeyFn(soul.id, integration.id);
+      const mapping = cellMap.get(cellKey) ?? null;
+      return (
+        <div key={cellKey} style={matrixRowStyles}>
+          <MatrixCell
+            soulId={soul.id}
+            integrationId={integration.id}
+            mapping={mapping}
+            bulkMode={bulkMode}
+            isSelected={selectedCells.has(cellKey)}
+            onToggle={onToggleMapping}
+            onSetPrimary={onSetPrimary}
+            onSelect={onCellSelect}
+          />
+        </div>
+      );
+    })}
+  </React.Fragment>
+));
+
+MatrixRow.displayName = 'MatrixRow';
+
 export const MatrixGrid: FC<MatrixGridProps> = memo(({
   data,
   isLoading = false,
@@ -281,35 +350,19 @@ export const MatrixGrid: FC<MatrixGridProps> = memo(({
               </div>
             ))}
 
-            {/* Soul rows */}
+            {/* Soul rows - using content-visibility for performance with large datasets (WEC-184) */}
             {souls.map((soul) => (
-              <React.Fragment key={soul.id}>
-                {/* Soul header (row label) */}
-                <MatrixHeaderCell
-                  label={soul.name}
-                  subtitle={soul.persona?.name}
-                  type="soul"
-                />
-
-                {/* Matrix cells */}
-                {integrations.map((integration) => {
-                  const cellKey = getCellKeyFn(soul.id, integration.id);
-                  const mapping = cellMap.get(cellKey) ?? null;
-                  return (
-                    <MatrixCell
-                      key={cellKey}
-                      soulId={soul.id}
-                      integrationId={integration.id}
-                      mapping={mapping}
-                      bulkMode={bulkMode}
-                      isSelected={selectedCells.has(cellKey)}
-                      onToggle={onToggleMapping}
-                      onSetPrimary={onSetPrimary}
-                      onSelect={handleCellSelect}
-                    />
-                  );
-                })}
-              </React.Fragment>
+              <MatrixRow
+                key={soul.id}
+                soul={soul}
+                integrations={integrations}
+                cellMap={cellMap}
+                bulkMode={bulkMode}
+                selectedCells={selectedCells}
+                onToggleMapping={onToggleMapping}
+                onSetPrimary={onSetPrimary}
+                onCellSelect={handleCellSelect}
+              />
             ))}
           </div>
         </div>

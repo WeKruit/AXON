@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback } from 'react';
-import useSWR, { SWRConfiguration } from 'swr';
+import { useCallback, useMemo } from 'react';
+import useSWR, { SWRConfiguration, preload } from 'swr';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
+import { defaultSwrConfig, AXON_CACHE_KEYS } from '@/lib/swr-config';
 import type {
   Soul,
   SoulWithStats,
@@ -21,12 +22,6 @@ import type {
   UpdateProxyDto,
   AxonAnalytics,
 } from '../types';
-
-const defaultSwrConfig: SWRConfiguration = {
-  revalidateOnFocus: false,
-  revalidateOnReconnect: false,
-  revalidateIfStale: false,
-};
 
 export function useSouls(config?: SWRConfiguration) {
   const fetch = useFetch();
@@ -313,4 +308,121 @@ export function useAxonAnalytics(config?: SWRConfiguration) {
   }, [fetch]);
 
   return useSWR<AxonAnalytics>('/axon/analytics', fetcher, { ...defaultSwrConfig, ...config });
+}
+
+/**
+ * Combined hook for Soul Dashboard - fetches soul and accounts in parallel
+ * Eliminates waterfall requests per async-parallel best practice
+ */
+export interface SoulDashboardData {
+  soul: SoulWithStats | null;
+  accounts: Account[];
+}
+
+export function useSoulDashboard(soulId: string | undefined, config?: SWRConfiguration) {
+  const fetch = useFetch();
+
+  const fetcher = useCallback(async (): Promise<SoulDashboardData> => {
+    if (!soulId) return { soul: null, accounts: [] };
+
+    // Fetch soul and accounts in parallel - eliminates waterfall
+    const [soulResponse, accountsResponse] = await Promise.all([
+      fetch(`/axon/souls/${soulId}`),
+      fetch(`/axon/accounts?soulId=${soulId}`),
+    ]);
+
+    if (!soulResponse.ok) throw new Error('Failed to fetch soul');
+    if (!accountsResponse.ok) throw new Error('Failed to fetch accounts');
+
+    const [soul, accountsResult] = await Promise.all([
+      soulResponse.json() as Promise<SoulWithStats>,
+      accountsResponse.json(),
+    ]);
+
+    return {
+      soul,
+      accounts: (accountsResult?.data ?? accountsResult ?? []) as Account[],
+    };
+  }, [fetch, soulId]);
+
+  const result = useSWR<SoulDashboardData>(
+    soulId ? AXON_CACHE_KEYS.soul(soulId) + ':dashboard' : null,
+    fetcher,
+    { ...defaultSwrConfig, ...config }
+  );
+
+  // Provide individual mutate functions for granular updates
+  const mutateSoul = useCallback(async () => {
+    await result.mutate();
+  }, [result]);
+
+  const mutateAccounts = useCallback(async () => {
+    await result.mutate();
+  }, [result]);
+
+  return {
+    data: result.data,
+    soul: result.data?.soul ?? null,
+    accounts: result.data?.accounts ?? [],
+    isLoading: result.isLoading,
+    error: result.error,
+    mutate: result.mutate,
+    mutateSoul,
+    mutateAccounts,
+  };
+}
+
+/**
+ * Preload functions for tab prefetching
+ * Call these on hover/focus to warm the cache
+ */
+export function usePreloadFunctions() {
+  const fetch = useFetch();
+
+  const preloadSouls = useCallback(() => {
+    const fetcher = async () => {
+      const response = await fetch(AXON_CACHE_KEYS.souls);
+      if (!response.ok) throw new Error('Failed to fetch souls');
+      const result = await response.json();
+      return (result?.data ?? result ?? []) as Soul[];
+    };
+    preload(AXON_CACHE_KEYS.souls, fetcher);
+  }, [fetch]);
+
+  const preloadAccounts = useCallback(() => {
+    const fetcher = async () => {
+      const response = await fetch(AXON_CACHE_KEYS.accounts());
+      if (!response.ok) throw new Error('Failed to fetch accounts');
+      const result = await response.json();
+      return (result?.data ?? result ?? []) as Account[];
+    };
+    preload(AXON_CACHE_KEYS.accounts(), fetcher);
+  }, [fetch]);
+
+  const preloadPersonas = useCallback(() => {
+    const fetcher = async () => {
+      const response = await fetch(AXON_CACHE_KEYS.personas);
+      if (!response.ok) throw new Error('Failed to fetch personas');
+      const result = await response.json();
+      return (result?.data ?? result ?? []) as Persona[];
+    };
+    preload(AXON_CACHE_KEYS.personas, fetcher);
+  }, [fetch]);
+
+  const preloadProxies = useCallback(() => {
+    const fetcher = async () => {
+      const response = await fetch(AXON_CACHE_KEYS.proxies);
+      if (!response.ok) throw new Error('Failed to fetch proxies');
+      const result = await response.json();
+      return (result?.data ?? result ?? []) as Proxy[];
+    };
+    preload(AXON_CACHE_KEYS.proxies, fetcher);
+  }, [fetch]);
+
+  return {
+    preloadSouls,
+    preloadAccounts,
+    preloadPersonas,
+    preloadProxies,
+  };
 }
