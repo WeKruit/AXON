@@ -94,9 +94,9 @@ export const AddAccountModal: FC<AddAccountModalProps> = ({ soulId, onClose, onS
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-newBgColorInner rounded-lg p-6 w-full max-w-lg mx-4 shadow-xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold">Add Account</h2>
+      <div className="relative bg-newBgColorInner text-newTextColor rounded-[24px] p-[32px] w-full max-w-lg mx-4 shadow-xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-[24px]">
+          <h2 className="text-[24px] font-semibold text-newTextColor">Add Account</h2>
           <button
             onClick={onClose}
             className="p-1 text-textItemBlur hover:text-newTextColor transition-colors"
@@ -136,7 +136,7 @@ export const AddAccountModal: FC<AddAccountModalProps> = ({ soulId, onClose, onS
                     {...register('platform', { required: 'Platform is required' })}
                     className="sr-only peer"
                   />
-                  <div className="flex flex-col items-center gap-1 p-2 rounded-lg bg-newBgLineColor peer-checked:bg-newPrimaryColor/20 peer-checked:ring-2 peer-checked:ring-newPrimaryColor transition-all">
+                  <div className="flex flex-col items-center gap-1 p-2 rounded-lg bg-newBgLineColor peer-checked:bg-btnPrimary/20 peer-checked:ring-2 peer-checked:ring-btnPrimary transition-all">
                     <PlatformIcon platform={platform.value} size="lg" />
                     <span className="text-[10px]">{platform.label}</span>
                   </div>
@@ -153,7 +153,7 @@ export const AddAccountModal: FC<AddAccountModalProps> = ({ soulId, onClose, onS
             <input
               type="text"
               {...register('username', { required: 'Username is required' })}
-              className="w-full px-3 py-2 bg-newBgLineColor rounded-lg border border-transparent focus:border-newPrimaryColor focus:outline-none transition-colors"
+              className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor placeholder-textItemBlur rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors"
               placeholder="@username"
             />
             {errors.username && (
@@ -167,7 +167,7 @@ export const AddAccountModal: FC<AddAccountModalProps> = ({ soulId, onClose, onS
             <input
               type="text"
               {...register('displayName')}
-              className="w-full px-3 py-2 bg-newBgLineColor rounded-lg border border-transparent focus:border-newPrimaryColor focus:outline-none transition-colors"
+              className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor placeholder-textItemBlur rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors"
               placeholder="Display name (optional)"
             />
           </div>
@@ -206,7 +206,7 @@ export const AddAccountModal: FC<AddAccountModalProps> = ({ soulId, onClose, onS
             <label className="block text-sm font-medium mb-1.5">Proxy</label>
             <select
               {...register('proxyId')}
-              className="w-full px-3 py-2 bg-newBgLineColor rounded-lg border border-transparent focus:border-newPrimaryColor focus:outline-none transition-colors"
+              className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors"
             >
               <option value="">Auto-select based on purpose</option>
               {filteredProxies && filteredProxies.length > 0 && (
@@ -233,18 +233,18 @@ export const AddAccountModal: FC<AddAccountModalProps> = ({ soulId, onClose, onS
             </p>
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 pt-[16px]">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 bg-newBgLineColor text-newTextColor rounded-lg hover:bg-newBgLineColor/80 transition-colors"
+              className="flex-1 px-[16px] py-[12px] bg-newBgLineColor text-newTextColor rounded-[8px] hover:bg-newBgLineColor/80 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 px-4 py-2 bg-newPrimaryColor text-white rounded-lg hover:bg-newPrimaryColor/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-[16px] py-[12px] bg-btnPrimary text-white rounded-[8px] hover:bg-btnPrimary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? 'Adding...' : 'Add Account'}
             </button>

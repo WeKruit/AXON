@@ -94,12 +94,12 @@ export const AccountsListComponent: FC = () => {
           placeholder="Search by username..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="px-3 py-2 bg-newBgLineColor rounded-lg border border-transparent focus:border-newPrimaryColor focus:outline-none text-sm w-64"
+          className="px-3 py-2 bg-newBgColorInner text-newTextColor placeholder-textItemBlur rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none text-sm w-64"
         />
         <select
           value={filterPlatform}
           onChange={(e) => setFilterPlatform(e.target.value as Platform | 'all')}
-          className="px-3 py-2 bg-newBgLineColor rounded-lg border border-transparent focus:border-newPrimaryColor focus:outline-none text-sm"
+          className="px-3 py-2 bg-newBgColorInner text-newTextColor rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none text-sm"
         >
           <option value="all">All Platforms</option>
           <option value="twitter">Twitter/X</option>
@@ -114,7 +114,7 @@ export const AccountsListComponent: FC = () => {
         <select
           value={filterPurpose}
           onChange={(e) => setFilterPurpose(e.target.value as AccountPurpose | 'all')}
-          className="px-3 py-2 bg-newBgLineColor rounded-lg border border-transparent focus:border-newPrimaryColor focus:outline-none text-sm"
+          className="px-3 py-2 bg-newBgColorInner text-newTextColor rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none text-sm"
         >
           <option value="all">All Purposes</option>
           <option value="content">Content</option>
@@ -125,7 +125,7 @@ export const AccountsListComponent: FC = () => {
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value as AccountStatus | 'all')}
-          className="px-3 py-2 bg-newBgLineColor rounded-lg border border-transparent focus:border-newPrimaryColor focus:outline-none text-sm"
+          className="px-3 py-2 bg-newBgColorInner text-newTextColor rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none text-sm"
         >
           <option value="all">All Statuses</option>
           <option value="active">Active</option>
@@ -210,7 +210,7 @@ export const AccountsListComponent: FC = () => {
                   <td className="px-4 py-3">
                     <Link
                       href={`/axon/souls/${account.soulId}`}
-                      className="text-sm text-newPrimaryColor hover:underline"
+                      className="text-sm text-btnPrimary hover:underline"
                     >
                       {getSoulName(account.soulId)}
                     </Link>
@@ -226,7 +226,7 @@ export const AccountsListComponent: FC = () => {
                       <div className="flex items-center gap-2">
                         <div className="w-16 h-1.5 bg-newBgColorInner rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-newPrimaryColor rounded-full transition-all"
+                            className="h-full bg-btnPrimary rounded-full transition-all"
                             style={{ width: `${account.warmupProgress}%` }}
                           />
                         </div>

@@ -114,7 +114,7 @@ export const PersonasListComponent: FC = () => {
           </button>
           <button
             onClick={() => setIsGenerateModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-newPrimaryColor text-white rounded-lg hover:bg-newPrimaryColor/90 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-btnPrimary text-white rounded-lg hover:bg-btnPrimary/90 transition-colors"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -169,7 +169,7 @@ export const PersonasListComponent: FC = () => {
             </button>
             <button
               onClick={() => setIsGenerateModalOpen(true)}
-              className="px-4 py-2 bg-newPrimaryColor text-white rounded-lg hover:bg-newPrimaryColor/90 transition-colors"
+              className="px-4 py-2 bg-btnPrimary text-white rounded-lg hover:bg-btnPrimary/90 transition-colors"
             >
               Generate with AI
             </button>
@@ -221,7 +221,7 @@ const PersonaCard: FC<PersonaCardProps> = ({ persona, onDelete }) => {
             {persona.name.charAt(0).toUpperCase()}
           </div>
           <div>
-            <h3 className="font-medium group-hover:text-newPrimaryColor transition-colors">
+            <h3 className="font-medium group-hover:text-btnPrimary transition-colors">
               {persona.name}
             </h3>
             <p className="text-xs text-textItemBlur">

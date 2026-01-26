@@ -92,7 +92,7 @@ export const AccountDetailComponent: FC<AccountDetailProps> = ({ accountId }) =>
               {soul && (
                 <Link
                   href={`/axon/souls/${soul.id}`}
-                  className="text-xs text-newPrimaryColor hover:underline"
+                  className="text-xs text-btnPrimary hover:underline"
                 >
                   Soul: {soul.name}
                 </Link>
@@ -126,7 +126,7 @@ export const AccountDetailComponent: FC<AccountDetailProps> = ({ accountId }) =>
               <div className="flex items-center gap-4">
                 <div className="flex-1 h-2 bg-newBgColorInner rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-newPrimaryColor rounded-full transition-all"
+                    className="h-full bg-btnPrimary rounded-full transition-all"
                     style={{ width: `${account.warmupProgress}%` }}
                   />
                 </div>
@@ -162,7 +162,7 @@ export const AccountDetailComponent: FC<AccountDetailProps> = ({ accountId }) =>
                 <select
                   value={account.status}
                   onChange={(e) => handleStatusChange(e.target.value as AccountStatus)}
-                  className="w-full px-3 py-2 bg-newBgColorInner rounded-lg border border-transparent focus:border-newPrimaryColor focus:outline-none text-sm"
+                  className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none text-sm"
                 >
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
@@ -176,7 +176,7 @@ export const AccountDetailComponent: FC<AccountDetailProps> = ({ accountId }) =>
                 <select
                   value={account.purpose}
                   onChange={(e) => handlePurposeChange(e.target.value as AccountPurpose)}
-                  className="w-full px-3 py-2 bg-newBgColorInner rounded-lg border border-transparent focus:border-newPrimaryColor focus:outline-none text-sm"
+                  className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none text-sm"
                 >
                   <option value="content">Content Creation</option>
                   <option value="engagement">Engagement</option>
