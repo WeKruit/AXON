@@ -13,9 +13,6 @@ export {
   useProxyMutations,
   useAxonAnalytics,
   useSoulDashboard,
-  usePreloadFunctions,
 } from './use-axon-api';
-
-export type { SoulDashboardData } from './use-axon-api';
 
 export { useDebounce, useDebouncedCallback } from './use-debounce';

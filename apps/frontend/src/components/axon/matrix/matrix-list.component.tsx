@@ -1,8 +1,9 @@
 'use client';
 
-import { FC, useCallback, useMemo, useState, useEffect } from 'react';
+import { FC, useCallback, useMemo, useEffect, useRef } from 'react';
 import { MatrixGrid } from './matrix-grid.component';
-import { useMatrix, useMatrixMutations, useMatrixStats } from './use-matrix';
+import { useMatrixMutations, useMatrixStats } from './use-matrix';
+import { useAxonData, useAxonScrollPreservation } from '../context/axon-data-provider';
 import { ErrorState } from '../ui/error-boundary';
 import { FilterIcon, GridIcon, RefreshIcon } from '../ui/icons';
 import { useToaster } from '@gitroom/react/toaster/toaster';
@@ -21,24 +22,46 @@ const PLATFORM_OPTIONS: { value: Platform | ''; label: string }[] = [
   { value: 'mastodon', label: 'Mastodon' },
 ];
 
+/**
+ * MatrixListComponent (WEC-190, WEC-193)
+ *
+ * Updated to use AxonDataProvider for:
+ * 1. Pre-fetched data from layout level (no loading flash on tab switch)
+ * 2. Persisted filter state across tab navigation
+ * 3. Preserved scroll position when returning to this tab
+ */
 export const MatrixListComponent: FC = () => {
-  const { data, souls, integrations, isLoading, error, mutate } = useMatrix();
+  // Get data and filter state from AxonDataProvider context
+  const {
+    matrixData: data,
+    souls,
+    isLoadingMatrix: isLoading,
+    matrixError: error,
+    mutateMatrix: mutate,
+    filters: contextFilters,
+    setMatrixFilters,
+  } = useAxonData();
+
   const { toggleMapping, setPrimary, bulkOperation } = useMatrixMutations();
   const stats = useMatrixStats(data);
   const toaster = useToaster();
   const soulContext = useSoulContextOptional();
 
-  const [filters, setFilters] = useState<MatrixFilters>({});
-  const [showFilters, setShowFilters] = useState(false);
+  // Use filter state from context instead of local useState
+  const filters = contextFilters.matrix;
+  const showFilters = Object.values(filters).some((v) => v !== undefined && v !== false);
+
+  // Scroll preservation hook
+  const { containerRef, handleScroll } = useAxonScrollPreservation('matrix');
 
   // Sync Soul context with filters - when user selects a Soul in the header,
   // automatically filter the matrix to that Soul
   useEffect(() => {
     if (soulContext) {
-      setFilters((prev) => ({
-        ...prev,
+      setMatrixFilters({
+        ...filters,
         soulId: soulContext.selectedSoulId || undefined,
-      }));
+      });
     }
   }, [soulContext?.selectedSoulId]);
 
@@ -123,17 +146,17 @@ export const MatrixListComponent: FC = () => {
 
   const handleFilterChange = useCallback(
     (key: keyof MatrixFilters, value: string | boolean) => {
-      setFilters((prev) => ({
-        ...prev,
+      setMatrixFilters({
+        ...filters,
         [key]: value === '' ? undefined : value,
-      }));
+      });
     },
-    []
+    [filters, setMatrixFilters]
   );
 
   const clearFilters = useCallback(() => {
-    setFilters({});
-  }, []);
+    setMatrixFilters({});
+  }, [setMatrixFilters]);
 
   const hasActiveFilters = useMemo(() => {
     return Object.values(filters).some((v) => v !== undefined && v !== false);
@@ -152,7 +175,11 @@ export const MatrixListComponent: FC = () => {
   }
 
   return (
-    <div className="flex-1 bg-newBgColorInner p-6">
+    <div
+      ref={containerRef}
+      onScroll={handleScroll}
+      className="flex-1 bg-newBgColorInner p-6 overflow-auto"
+    >
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -163,7 +190,14 @@ export const MatrixListComponent: FC = () => {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowFilters(!showFilters)}
+            onClick={() => {
+              if (hasActiveFilters) {
+                clearFilters();
+              } else {
+                // Toggle filter panel visibility by setting a dummy filter
+                setMatrixFilters({ ...filters, showOnlyConnected: false });
+              }
+            }}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
               showFilters || hasActiveFilters
                 ? 'bg-btnPrimary text-white'
@@ -198,7 +232,7 @@ export const MatrixListComponent: FC = () => {
       )}
 
       {/* Filters Panel */}
-      {showFilters && (
+      {(showFilters || hasActiveFilters) && (
         <div className="bg-newBgLineColor rounded-lg p-4 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-medium">Filter Matrix</h3>
