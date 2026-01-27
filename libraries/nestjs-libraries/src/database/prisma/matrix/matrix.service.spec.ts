@@ -15,10 +15,15 @@ describe('MatrixService', () => {
 
   const mockSoul = {
     id: 'soul-1',
+    name: 'Test Soul',
     displayName: 'Test Soul',
     email: 'test@example.com',
     organizationId: mockOrganizationId,
-  };
+    status: 'active',
+    accountIds: [] as string[],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  } as any;
 
   const mockIntegration = {
     id: 'int-1',
@@ -46,6 +51,7 @@ describe('MatrixService', () => {
   beforeEach(async () => {
     const mockMatrixRepository = {
       getAllMappings: jest.fn(),
+      getAllMappingsLean: jest.fn(),
       getAllIntegrations: jest.fn(),
       findBySoulId: jest.fn(),
       findByIntegrationId: jest.fn(),
@@ -87,7 +93,7 @@ describe('MatrixService', () => {
         hasMore: false,
       });
       matrixRepository.getAllIntegrations.mockResolvedValue([mockIntegration]);
-      matrixRepository.getAllMappings.mockResolvedValue([mockMapping]);
+      matrixRepository.getAllMappingsLean.mockResolvedValue([mockMapping]);
 
       const result = await service.getMatrix(mockOrganizationId, {});
 
@@ -127,7 +133,7 @@ describe('MatrixService', () => {
     it('should return empty arrays when no data exists', async () => {
       soulRepository.findAll.mockResolvedValue({ data: [], total: 0, hasMore: false });
       matrixRepository.getAllIntegrations.mockResolvedValue([]);
-      matrixRepository.getAllMappings.mockResolvedValue([]);
+      matrixRepository.getAllMappingsLean.mockResolvedValue([]);
 
       const result = await service.getMatrix(mockOrganizationId, {});
 
@@ -387,6 +393,235 @@ describe('MatrixService', () => {
       await expect(
         service.getSoulsForIntegration(mockOrganizationId, 'nonexistent')
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('Matrix Data Link Status', () => {
+    it('should include integrationIds for each soul showing link status', async () => {
+      const multipleMappings = [
+        { ...mockMapping, soulId: 'soul-1', integrationId: 'int-1' },
+        { ...mockMapping, id: 'map-2', soulId: 'soul-1', integrationId: 'int-2' },
+        { ...mockMapping, id: 'map-3', soulId: 'soul-2', integrationId: 'int-1' },
+      ];
+
+      soulRepository.findAll.mockResolvedValue({
+        data: [
+          { ...mockSoul, id: 'soul-1' },
+          { ...mockSoul, id: 'soul-2', displayName: 'Soul 2', email: 'soul2@example.com' },
+        ],
+        total: 2,
+        hasMore: false,
+      });
+      matrixRepository.getAllIntegrations.mockResolvedValue([
+        mockIntegration,
+        { ...mockIntegration, id: 'int-2', name: '@account2' },
+      ]);
+      matrixRepository.getAllMappingsLean.mockResolvedValue(multipleMappings);
+
+      const result = await service.getMatrix(mockOrganizationId, {});
+
+      // Soul 1 should be linked to int-1 and int-2
+      const soul1 = result.souls.find(s => s.id === 'soul-1');
+      expect(soul1?.integrationIds).toEqual(['int-1', 'int-2']);
+
+      // Soul 2 should only be linked to int-1
+      const soul2 = result.souls.find(s => s.id === 'soul-2');
+      expect(soul2?.integrationIds).toEqual(['int-1']);
+    });
+
+    it('should show empty integrationIds for unlinked souls', async () => {
+      soulRepository.findAll.mockResolvedValue({
+        data: [mockSoul],
+        total: 1,
+        hasMore: false,
+      });
+      matrixRepository.getAllIntegrations.mockResolvedValue([mockIntegration]);
+      matrixRepository.getAllMappingsLean.mockResolvedValue([]); // No mappings
+
+      const result = await service.getMatrix(mockOrganizationId, {});
+
+      expect(result.souls[0].integrationIds).toEqual([]);
+    });
+
+    it('should correctly identify primary channel status in mappings', async () => {
+      const mappingsWithPrimary = [
+        { ...mockMapping, id: 'map-1', isPrimary: true },
+        { ...mockMapping, id: 'map-2', integrationId: 'int-2', isPrimary: false },
+      ];
+
+      soulRepository.findAll.mockResolvedValue({
+        data: [mockSoul],
+        total: 1,
+        hasMore: false,
+      });
+      matrixRepository.getAllIntegrations.mockResolvedValue([mockIntegration]);
+      matrixRepository.getAllMappingsLean.mockResolvedValue(mappingsWithPrimary);
+
+      const result = await service.getMatrix(mockOrganizationId, {});
+
+      const primaryMapping = result.mappings.find(m => m.id === 'map-1');
+      expect(primaryMapping?.isPrimary).toBe(true);
+
+      const nonPrimaryMapping = result.mappings.find(m => m.id === 'map-2');
+      expect(nonPrimaryMapping?.isPrimary).toBe(false);
+    });
+  });
+
+  describe('updateMapping', () => {
+    it('should update mapping properties', async () => {
+      matrixRepository.findById.mockResolvedValue(mockMapping);
+      matrixRepository.update.mockResolvedValue(undefined);
+      matrixRepository.findById.mockResolvedValue({ ...mockMapping, notes: 'Updated notes' });
+
+      const result = await service.updateMapping(mockOrganizationId, 'map-1', { notes: 'Updated notes' });
+
+      expect(matrixRepository.update).toHaveBeenCalledWith(mockOrganizationId, 'map-1', { notes: 'Updated notes' });
+    });
+
+    it('should throw NotFoundException when mapping does not exist', async () => {
+      matrixRepository.findById.mockResolvedValue(null);
+
+      await expect(
+        service.updateMapping(mockOrganizationId, 'nonexistent', { notes: 'test' })
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should unset other primaries when setting isPrimary to true', async () => {
+      const existingPrimary = { ...mockMapping, id: 'map-existing', isPrimary: true };
+      const targetMapping = { ...mockMapping, id: 'map-target', isPrimary: false };
+
+      matrixRepository.findById.mockResolvedValueOnce(targetMapping);
+      matrixRepository.findBySoulId.mockResolvedValue([existingPrimary, targetMapping]);
+      matrixRepository.update.mockResolvedValue(undefined);
+      matrixRepository.findById.mockResolvedValue({ ...targetMapping, isPrimary: true });
+
+      await service.updateMapping(mockOrganizationId, 'map-target', { isPrimary: true });
+
+      expect(matrixRepository.update).toHaveBeenCalledWith(
+        mockOrganizationId,
+        'map-existing',
+        { isPrimary: false }
+      );
+    });
+  });
+
+  describe('getMappingById', () => {
+    it('should return mapping by ID', async () => {
+      matrixRepository.findById.mockResolvedValue(mockMapping);
+
+      const result = await service.getMappingById(mockOrganizationId, 'map-1');
+
+      expect(result.id).toBe('map-1');
+      expect(matrixRepository.findById).toHaveBeenCalledWith(mockOrganizationId, 'map-1');
+    });
+
+    it('should throw NotFoundException when mapping does not exist', async () => {
+      matrixRepository.findById.mockResolvedValue(null);
+
+      await expect(
+        service.getMappingById(mockOrganizationId, 'nonexistent')
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('Concurrent Operations', () => {
+    it('should handle concurrent toggle requests gracefully', async () => {
+      // First call creates, second call should delete
+      soulRepository.findById.mockResolvedValue(mockSoul);
+      matrixRepository.integrationExists.mockResolvedValue(true);
+
+      // Simulate race condition - first finds no existing, creates
+      matrixRepository.findExisting
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(mockMapping);
+
+      matrixRepository.create.mockResolvedValue(mockMapping);
+      matrixRepository.findById.mockResolvedValue(mockMapping);
+
+      const result1 = await service.toggleMapping(
+        mockOrganizationId,
+        { soulId: 'soul-1', integrationId: 'int-1' },
+        mockUserId
+      );
+
+      const result2 = await service.toggleMapping(
+        mockOrganizationId,
+        { soulId: 'soul-1', integrationId: 'int-1' },
+        mockUserId
+      );
+
+      expect(result1.action).toBe('created');
+      expect(result2.action).toBe('deleted');
+    });
+  });
+
+  describe('Validation Edge Cases', () => {
+    it('should validate integration belongs to same organization', async () => {
+      soulRepository.findById.mockResolvedValue(mockSoul);
+      // Integration exists returns false (doesn't exist in this org)
+      matrixRepository.integrationExists.mockResolvedValue(false);
+
+      await expect(
+        service.createMapping(
+          mockOrganizationId,
+          { soulId: 'soul-1', integrationId: 'int-different-org' },
+          mockUserId
+        )
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should handle bulk operations with mixed valid/invalid items', async () => {
+      soulRepository.findById
+        .mockResolvedValueOnce(mockSoul) // Valid
+        .mockResolvedValueOnce(null); // Invalid - soul not found
+
+      matrixRepository.integrationExists.mockResolvedValue(true);
+      matrixRepository.bulkCreate.mockResolvedValue({
+        succeeded: 1,
+        failed: 0,
+        createdIds: ['map-1'],
+        errors: [],
+      });
+
+      const result = await service.bulkOperations(
+        mockOrganizationId,
+        {
+          operation: BulkOperationType.CREATE,
+          mappings: [
+            { soulId: 'soul-1', integrationId: 'int-1' },
+            { soulId: 'soul-invalid', integrationId: 'int-1' },
+          ],
+        },
+        mockUserId
+      );
+
+      expect(result.succeeded).toBe(1);
+      expect(result.failed).toBe(1);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].soulId).toBe('soul-invalid');
+    });
+
+    it('should reject bulk operations with integration from different org', async () => {
+      soulRepository.findById.mockResolvedValue(mockSoul);
+      matrixRepository.integrationExists.mockResolvedValue(false);
+      matrixRepository.bulkCreate.mockResolvedValue({
+        succeeded: 0,
+        failed: 0,
+        createdIds: [],
+        errors: [],
+      });
+
+      const result = await service.bulkOperations(
+        mockOrganizationId,
+        {
+          operation: BulkOperationType.CREATE,
+          mappings: [{ soulId: 'soul-1', integrationId: 'int-different-org' }],
+        },
+        mockUserId
+      );
+
+      expect(result.failed).toBe(1);
+      expect(result.errors[0].error).toBe('Integration not found');
     });
   });
 });
