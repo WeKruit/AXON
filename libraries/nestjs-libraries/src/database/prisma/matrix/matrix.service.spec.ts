@@ -43,9 +43,9 @@ describe('MatrixService', () => {
     organizationId: mockOrganizationId,
     isPrimary: false,
     priority: 0,
-    notes: null,
+    notes: null as any,
     createdBy: mockUserId,
-    accountId: null,
+    accountId: null as any,
     createdAt: new Date(),
     updatedAt: new Date(),
     integration: mockIntegration,
@@ -113,7 +113,6 @@ describe('MatrixService', () => {
     it('should return formatted matrix data with souls, integrations, and mappings', async () => {
       soulRepository.findAll.mockResolvedValue({
         data: [mockSoul],
-        total: 1,
         hasMore: false,
       });
       matrixRepository.getAllIntegrations.mockResolvedValue([mockIntegration]);
@@ -155,7 +154,7 @@ describe('MatrixService', () => {
     });
 
     it('should return empty arrays when no data exists', async () => {
-      soulRepository.findAll.mockResolvedValue({ data: [], total: 0, hasMore: false });
+      soulRepository.findAll.mockResolvedValue({ data: [], hasMore: false });
       matrixRepository.getAllIntegrations.mockResolvedValue([]);
       matrixRepository.getAllMappingsLean.mockResolvedValue([]);
 
@@ -360,7 +359,9 @@ describe('MatrixService', () => {
 
   describe('setPrimaryChannel', () => {
     it('should set a mapping as primary', async () => {
-      matrixRepository.findById.mockResolvedValue(mockMapping);
+      matrixRepository.findById
+        .mockResolvedValueOnce(mockMapping)
+        .mockResolvedValueOnce({ ...mockMapping, isPrimary: true });
       matrixRepository.setPrimary.mockResolvedValue({ ...mockMapping, isPrimary: true });
 
       const result = await service.setPrimaryChannel(mockOrganizationId, 'map-1');
@@ -433,7 +434,6 @@ describe('MatrixService', () => {
           { ...mockSoul, id: 'soul-1' },
           { ...mockSoul, id: 'soul-2', displayName: 'Soul 2', email: 'soul2@example.com' },
         ],
-        total: 2,
         hasMore: false,
       });
       matrixRepository.getAllIntegrations.mockResolvedValue([
@@ -456,7 +456,6 @@ describe('MatrixService', () => {
     it('should show empty integrationIds for unlinked souls', async () => {
       soulRepository.findAll.mockResolvedValue({
         data: [mockSoul],
-        total: 1,
         hasMore: false,
       });
       matrixRepository.getAllIntegrations.mockResolvedValue([mockIntegration]);
@@ -475,7 +474,6 @@ describe('MatrixService', () => {
 
       soulRepository.findAll.mockResolvedValue({
         data: [mockSoul],
-        total: 1,
         hasMore: false,
       });
       matrixRepository.getAllIntegrations.mockResolvedValue([mockIntegration]);
@@ -760,7 +758,6 @@ describe('MatrixService', () => {
         const mappingWithAccount = { ...mockMapping, accountId: 'acc-linked-1' };
         soulRepository.findAll.mockResolvedValue({
           data: [mockSoul],
-          total: 1,
           hasMore: false,
         });
         matrixRepository.getAllIntegrations.mockResolvedValue([mockIntegration]);

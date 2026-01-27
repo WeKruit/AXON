@@ -678,7 +678,7 @@ describe('AccountRepository', () => {
         expect(firestoreService.update).toHaveBeenCalledWith(
           'accounts',
           'acc-1',
-          { integrationId: null }
+          { integrationId: undefined }
         );
       });
 
@@ -692,16 +692,13 @@ describe('AccountRepository', () => {
     });
 
     describe('findByIntegrationId', () => {
-      it('should return accounts linked to an integration', async () => {
-        const linkedAccounts = [
-          { ...mockAccount, integrationId: 'int-1' },
-          { ...mockAccount, id: 'acc-2', handle: 'user2', integrationId: 'int-1' },
-        ];
-        firestoreService.query.mockResolvedValue(linkedAccounts);
+      it('should return account linked to an integration', async () => {
+        const linkedAccount = { ...mockAccount, integrationId: 'int-1' };
+        firestoreService.query.mockResolvedValue([linkedAccount]);
 
         const result = await repository.findByIntegrationId(mockOrganizationId, 'int-1');
 
-        expect(result).toEqual(linkedAccounts);
+        expect(result).toEqual(linkedAccount);
         expect(firestoreService.query).toHaveBeenCalledWith(
           'accounts',
           expect.objectContaining({
@@ -714,12 +711,12 @@ describe('AccountRepository', () => {
         );
       });
 
-      it('should return empty array when no accounts linked', async () => {
+      it('should return null when no account linked', async () => {
         firestoreService.query.mockResolvedValue([]);
 
         const result = await repository.findByIntegrationId(mockOrganizationId, 'int-no-accounts');
 
-        expect(result).toEqual([]);
+        expect(result).toBeNull();
       });
     });
 
