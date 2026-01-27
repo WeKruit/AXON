@@ -3,12 +3,13 @@
 import { FC, memo, useCallback, useState } from 'react';
 import clsx from 'clsx';
 import { CheckIcon, StarFilledIcon } from '../ui/icons';
-import type { SoulIntegrationMapping, CellState } from './types';
+import type { SoulIntegrationMapping, CellState, LinkedAccountInfo } from './types';
 
 export interface MatrixCellProps {
   soulId: string;
   integrationId: string;
   mapping: SoulIntegrationMapping | null;
+  linkedAccount?: LinkedAccountInfo;
   isLoading?: boolean;
   disabled?: boolean;
   bulkMode?: boolean;
@@ -39,6 +40,7 @@ export const MatrixCell: FC<MatrixCellProps> = memo(({
   soulId,
   integrationId,
   mapping,
+  linkedAccount,
   isLoading = false,
   disabled = false,
   bulkMode = false,
@@ -51,6 +53,7 @@ export const MatrixCell: FC<MatrixCellProps> = memo(({
   const state = getCellState(mapping);
   const isConnected = state !== 'disconnected';
   const isPrimary = state === 'primary';
+  const hasLinkedAccount = !!linkedAccount;
 
   const handleClick = useCallback(async () => {
     if (disabled || isProcessing) return;
@@ -100,7 +103,7 @@ export const MatrixCell: FC<MatrixCellProps> = memo(({
         disabled && 'opacity-50 cursor-not-allowed',
         bulkMode && isSelected && 'ring-2 ring-btnPrimary',
       )}
-      aria-label={`${isConnected ? 'Connected' : 'Disconnected'}${isPrimary ? ', Primary' : ''}. Click to toggle, double-click to set primary.`}
+      aria-label={`${isConnected ? 'Connected' : 'Disconnected'}${isPrimary ? ', Primary' : ''}${hasLinkedAccount ? `, Account: ${linkedAccount.username}` : ''}. Click to toggle, double-click to set primary.`}
       aria-pressed={isConnected}
       data-soul-id={soulId}
       data-integration-id={integrationId}
@@ -117,9 +120,35 @@ export const MatrixCell: FC<MatrixCellProps> = memo(({
         </>
       )}
 
+      {/* Account link indicator */}
+      {hasLinkedAccount && (
+        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border border-newBgColor flex items-center justify-center">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="8"
+            height="8"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="white"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+          </svg>
+        </div>
+      )}
+
       {/* Tooltip on hover */}
       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-newBgColor rounded text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 border border-newBgLineColor shadow-lg">
         {isConnected ? (isPrimary ? 'Primary' : 'Connected') : 'Not connected'}
+        {hasLinkedAccount && (
+          <>
+            <br />
+            <span className="text-green-400">Account: @{linkedAccount.username}</span>
+          </>
+        )}
         <br />
         <span className="text-textItemBlur">
           {isConnected ? 'Double-click to toggle primary' : 'Click to connect'}

@@ -244,4 +244,56 @@ export class AccountRepository {
       ],
     });
   }
+
+  /**
+   * Link an account to a Postiz integration
+   */
+  async linkIntegration(organizationId: string, accountId: string, integrationId: string): Promise<void> {
+    const existing = await this.findById(organizationId, accountId);
+    if (!existing) {
+      throw new NotFoundException('Account not found');
+    }
+    await this.firestore.update<Account>(COLLECTION, accountId, { integrationId });
+  }
+
+  /**
+   * Unlink an account from its Postiz integration
+   */
+  async unlinkIntegration(organizationId: string, accountId: string): Promise<void> {
+    const existing = await this.findById(organizationId, accountId);
+    if (!existing) {
+      throw new NotFoundException('Account not found');
+    }
+    // Set to undefined to remove the field, or null to explicitly mark as unlinked
+    await this.firestore.update<Account>(COLLECTION, accountId, { integrationId: undefined });
+  }
+
+  /**
+   * Find an account by its linked integration ID
+   */
+  async findByIntegrationId(organizationId: string, integrationId: string): Promise<Account | null> {
+    const results = await this.firestore.query<Account>(COLLECTION, {
+      where: [
+        { field: 'organizationId', operator: '==', value: organizationId },
+        { field: 'integrationId', operator: '==', value: integrationId },
+        { field: 'deletedAt', operator: '==', value: null },
+      ],
+      limit: 1,
+    });
+    return results[0] || null;
+  }
+
+  /**
+   * Find accounts by soul ID and platform (for auto-linking)
+   */
+  async findBySoulIdAndPlatform(organizationId: string, soulId: string, platform: Platform): Promise<Account[]> {
+    return this.firestore.query<Account>(COLLECTION, {
+      where: [
+        { field: 'organizationId', operator: '==', value: organizationId },
+        { field: 'soulId', operator: '==', value: soulId },
+        { field: 'platform', operator: '==', value: platform },
+        { field: 'deletedAt', operator: '==', value: null },
+      ],
+    });
+  }
 }
