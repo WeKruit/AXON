@@ -21,6 +21,16 @@ export interface Soul {
   updatedAt: string;
 }
 
+/**
+ * Integration summary for displaying linked integration info on accounts
+ */
+export interface AccountIntegration {
+  id: string;
+  name: string;
+  platform: Platform;
+  picture?: string;
+}
+
 export interface Account {
   id: string;
   soulId: string;
@@ -34,6 +44,8 @@ export interface Account {
   status: AccountStatus;
   proxyId?: string;
   proxy?: Proxy;
+  integrationId?: string;
+  integration?: AccountIntegration;
   warmupProgress?: number;
   lastActivityAt?: string;
   metadata?: Record<string, unknown>;
@@ -156,6 +168,7 @@ export interface CreateAccountDto {
   displayName?: string;
   purpose: AccountPurpose;
   proxyId?: string;
+  integrationId?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -164,6 +177,7 @@ export interface UpdateAccountDto {
   purpose?: AccountPurpose;
   status?: AccountStatus;
   proxyId?: string;
+  integrationId?: string | null;
   metadata?: Record<string, unknown>;
 }
 

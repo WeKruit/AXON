@@ -2,7 +2,7 @@
 
 import { FC, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
-import { useProxies } from '../hooks';
+import { useProxies, useCompatibleIntegrations } from '../hooks';
 import { PlatformIcon } from '../ui/platform-icon';
 import type { CreateAccountDto, Platform, AccountPurpose, ProxyType } from '../types';
 import { DEFAULT_PROXY_PURPOSE_MATRIX } from '../types';
@@ -66,17 +66,24 @@ export const AddAccountModal: FC<AddAccountModalProps> = ({ soulId, onClose, onS
       displayName: '',
       purpose: 'content',
       proxyId: '',
+      integrationId: '',
     },
   });
 
   const selectedPurpose = watch('purpose');
+  const selectedPlatform = watch('platform');
   const recommendedProxyTypes = purposes.find((p) => p.value === selectedPurpose)?.recommendedProxy || [];
+
+  // Fetch integrations compatible with the selected platform
+  const { data: compatibleIntegrations, isLoading: isLoadingIntegrations } =
+    useCompatibleIntegrations(selectedPlatform);
 
   const handleFormSubmit = useCallback(
     async (data: CreateAccountDto) => {
       const submitData = {
         ...data,
         proxyId: data.proxyId || undefined,
+        integrationId: data.integrationId || undefined,
       };
       await onSubmit(submitData);
     },
@@ -231,6 +238,39 @@ export const AddAccountModal: FC<AddAccountModalProps> = ({ soulId, onClose, onS
             <p className="text-xs text-textItemBlur mt-1">
               Based on your selected purpose, we recommend using {recommendedProxyTypes.join(' or ')} proxies
             </p>
+          </div>
+
+          {/* Integration Link Section */}
+          <div>
+            <label className="block text-sm font-medium mb-1.5">
+              Link to Integration (Optional)
+            </label>
+            {isLoadingIntegrations ? (
+              <div className="h-10 bg-newBgLineColor rounded animate-pulse" />
+            ) : compatibleIntegrations && compatibleIntegrations.length > 0 ? (
+              <>
+                <select
+                  {...register('integrationId')}
+                  className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors"
+                >
+                  <option value="">Don&apos;t link to an integration</option>
+                  {compatibleIntegrations.map((integration) => (
+                    <option key={integration.id} value={integration.id}>
+                      {integration.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-textItemBlur mt-1">
+                  Link this account to a connected {selectedPlatform} channel for direct publishing
+                </p>
+              </>
+            ) : (
+              <div className="p-3 bg-newBgLineColor rounded-lg">
+                <p className="text-xs text-textItemBlur">
+                  No {selectedPlatform} integrations available. Connect a channel in Integrations first.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3 pt-[16px]">

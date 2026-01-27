@@ -38,6 +38,15 @@ export interface SoulIntegrationMapping {
 }
 
 /**
+ * Linked account info for matrix cell display
+ */
+export interface LinkedAccountInfo {
+  id: string;
+  username: string;
+  platform: Platform;
+}
+
+/**
  * MatrixCell represents a single cell in the Soul-Channel matrix grid
  * Combines soul and integration context with mapping state
  */
@@ -47,6 +56,7 @@ export interface MatrixCell {
   mapping: SoulIntegrationMapping | null;
   isConnected: boolean;
   isPrimary: boolean;
+  linkedAccount?: LinkedAccountInfo;
 }
 
 /**

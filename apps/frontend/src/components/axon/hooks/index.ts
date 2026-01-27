@@ -14,8 +14,10 @@ export {
   useAxonAnalytics,
   useSoulDashboard,
   usePreloadFunctions,
+  useCompatibleIntegrations,
+  useAccountIntegrationMutations,
 } from './use-axon-api';
 
-export type { SoulDashboardData } from './use-axon-api';
+export type { SoulDashboardData, AccountLinkableIntegration } from './use-axon-api';
 
 export { useDebounce, useDebouncedCallback } from './use-debounce';

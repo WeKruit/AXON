@@ -135,6 +135,7 @@ export interface Account extends FirestoreDocument {
   status: AccountStatus;
   credentials: AccountCredentials;
   proxyId?: string;
+  integrationId?: string; // Linked Postiz integration ID
   metrics?: AccountMetrics;
   warmingConfig?: WarmingConfig;
   lastActivityAt?: Date;
@@ -218,6 +219,11 @@ export class CreateAccountDto {
   @IsString({ each: true })
   @IsOptional()
   tags?: string[];
+
+  @ApiPropertyOptional({ description: 'Linked Postiz integration ID' })
+  @IsString()
+  @IsOptional()
+  integrationId?: string;
 }
 
 // Update Account DTO
@@ -295,6 +301,11 @@ export class UpdateAccountDto {
   @IsString({ each: true })
   @IsOptional()
   tags?: string[];
+
+  @ApiPropertyOptional({ description: 'Linked Postiz integration ID (null to unlink)' })
+  @IsString()
+  @IsOptional()
+  integrationId?: string | null;
 }
 
 // Account Response DTO
@@ -331,6 +342,9 @@ export class AccountResponseDto {
 
   @ApiPropertyOptional({ description: 'Assigned proxy ID' })
   proxyId?: string;
+
+  @ApiPropertyOptional({ description: 'Linked Postiz integration ID' })
+  integrationId?: string;
 
   @ApiPropertyOptional({ description: 'Account metrics' })
   metrics?: AccountMetrics;
@@ -439,4 +453,12 @@ export class AssignAccountProxyDto {
   @IsString()
   @IsOptional()
   proxyId?: string | null;
+}
+
+// Link Integration DTO
+export class LinkAccountIntegrationDto {
+  @ApiPropertyOptional({ description: 'Integration ID to link (null to unlink)' })
+  @IsString()
+  @IsOptional()
+  integrationId?: string | null;
 }

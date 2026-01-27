@@ -45,6 +45,7 @@ describe('MatrixService', () => {
     priority: 0,
     notes: null,
     createdBy: mockUserId,
+    accountId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     integration: mockIntegration,
@@ -57,10 +58,12 @@ describe('MatrixService', () => {
       getAllIntegrations: jest.fn(),
       findBySoulId: jest.fn(),
       findByIntegrationId: jest.fn(),
+      findByAccountId: jest.fn(),
       findExisting: jest.fn(),
       findById: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      updateAccountId: jest.fn(),
       delete: jest.fn(),
       bulkCreate: jest.fn(),
       bulkDelete: jest.fn(),
@@ -75,9 +78,10 @@ describe('MatrixService', () => {
     };
 
     const mockAccountService = {
-      autoLinkByHandle: jest.fn(),
+      autoLinkByHandle: jest.fn().mockResolvedValue(null),
       linkToIntegration: jest.fn(),
       unlinkFromIntegration: jest.fn(),
+      findByIntegrationId: jest.fn(),
       create: jest.fn(),
       findById: jest.fn(),
       findAll: jest.fn(),

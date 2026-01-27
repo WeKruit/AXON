@@ -315,3 +315,151 @@ export function useAxonAnalytics(config?: SWRConfiguration) {
 
   return useSWR<AxonAnalytics>('/axon/analytics', fetcher, { ...defaultSwrConfig, ...config });
 }
+
+/**
+ * Soul dashboard data combining soul with its accounts
+ */
+export interface SoulDashboardData {
+  soul: Soul;
+  accounts: Account[];
+}
+
+/**
+ * Hook to fetch soul and its accounts in parallel for dashboard view
+ */
+export function useSoulDashboard(soulId: string | undefined, config?: SWRConfiguration) {
+  const fetch = useFetch();
+
+  const fetcher = useCallback(async (): Promise<SoulDashboardData | null> => {
+    if (!soulId) return null;
+
+    // Fetch soul and accounts in parallel
+    const [soulResponse, accountsResponse] = await Promise.all([
+      fetch(`/axon/souls/${soulId}`),
+      fetch(`/axon/accounts?soulId=${soulId}`),
+    ]);
+
+    if (!soulResponse.ok) throw new Error('Failed to fetch soul');
+    if (!accountsResponse.ok) throw new Error('Failed to fetch accounts');
+
+    const soul = await soulResponse.json();
+    const accountsResult = await accountsResponse.json();
+    const accounts = accountsResult?.data ?? accountsResult ?? [];
+
+    return { soul, accounts };
+  }, [fetch, soulId]);
+
+  const { data, isLoading, error, mutate } = useSWR<SoulDashboardData | null>(
+    soulId ? `/axon/soul-dashboard/${soulId}` : null,
+    fetcher,
+    { ...defaultSwrConfig, ...config }
+  );
+
+  return {
+    data,
+    soul: data?.soul ?? null,
+    accounts: data?.accounts ?? [],
+    isLoading,
+    error,
+    mutate,
+  };
+}
+
+/**
+ * Preload functions for optimistic data fetching
+ */
+export function usePreloadFunctions() {
+  const fetch = useFetch();
+
+  const preloadSoul = useCallback(async (soulId: string) => {
+    const response = await fetch(`/axon/souls/${soulId}`);
+    if (response.ok) {
+      return response.json();
+    }
+    return null;
+  }, [fetch]);
+
+  const preloadAccounts = useCallback(async (soulId?: string) => {
+    const url = soulId ? `/axon/accounts?soulId=${soulId}` : '/axon/accounts';
+    const response = await fetch(url);
+    if (response.ok) {
+      const result = await response.json();
+      return result?.data ?? result ?? [];
+    }
+    return [];
+  }, [fetch]);
+
+  return { preloadSoul, preloadAccounts };
+}
+
+/**
+ * Integration type for account linking (simplified from matrix Integration)
+ */
+export interface AccountLinkableIntegration {
+  id: string;
+  name: string;
+  platform: string;
+  picture?: string;
+  disabled?: boolean;
+}
+
+/**
+ * Hook to fetch integrations filtered by platform for account linking
+ */
+export function useCompatibleIntegrations(platform?: string, config?: SWRConfiguration) {
+  const fetch = useFetch();
+
+  const fetcher = useCallback(async () => {
+    const response = await fetch('/integrations/list');
+    if (!response.ok) throw new Error('Failed to fetch integrations');
+    const result = await response.json();
+    const integrations = (result?.integrations ?? result ?? []) as AccountLinkableIntegration[];
+
+    // Filter by platform if provided
+    if (platform) {
+      return integrations.filter(
+        (i) => i.platform?.toLowerCase() === platform.toLowerCase() && !i.disabled
+      );
+    }
+    return integrations.filter((i) => !i.disabled);
+  }, [fetch, platform]);
+
+  return useSWR<AccountLinkableIntegration[]>(
+    platform ? `/integrations/list?platform=${platform}` : '/integrations/list',
+    fetcher,
+    { ...defaultSwrConfig, ...config }
+  );
+}
+
+/**
+ * Hook for account-integration linking mutations
+ */
+export function useAccountIntegrationMutations() {
+  const fetch = useFetch();
+
+  const linkAccountToIntegration = useCallback(
+    async (accountId: string, integrationId: string): Promise<Account> => {
+      const response = await fetch(`/axon/accounts/${accountId}/integration`, {
+        method: 'PATCH',
+        body: JSON.stringify({ integrationId }),
+      });
+      if (!response.ok) throw new Error('Failed to link account to integration');
+      return response.json();
+    },
+    [fetch]
+  );
+
+  const unlinkAccountFromIntegration = useCallback(
+    async (accountId: string): Promise<Account> => {
+      const response = await fetch(`/axon/accounts/${accountId}/integration`, {
+        method: 'PATCH',
+        body: JSON.stringify({ integrationId: null }),
+      });
+      if (!response.ok) throw new Error('Failed to unlink account from integration');
+      return response.json();
+    },
+    [fetch]
+  );
+
+  return { linkAccountToIntegration, unlinkAccountFromIntegration };
+}
