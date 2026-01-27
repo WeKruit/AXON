@@ -439,7 +439,7 @@ export function useAccountIntegrationMutations() {
 
   const linkAccountToIntegration = useCallback(
     async (accountId: string, integrationId: string): Promise<Account> => {
-      const response = await fetch(`/axon/accounts/${accountId}`, {
+      const response = await fetch(`/axon/accounts/${accountId}/integration`, {
         method: 'PATCH',
         body: JSON.stringify({ integrationId }),
       });
@@ -451,7 +451,7 @@ export function useAccountIntegrationMutations() {
 
   const unlinkAccountFromIntegration = useCallback(
     async (accountId: string): Promise<Account> => {
-      const response = await fetch(`/axon/accounts/${accountId}`, {
+      const response = await fetch(`/axon/accounts/${accountId}/integration`, {
         method: 'PATCH',
         body: JSON.stringify({ integrationId: null }),
       });
