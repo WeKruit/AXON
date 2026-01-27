@@ -631,4 +631,133 @@ describe('AccountRepository', () => {
       ).rejects.toThrow('Batch operation failed');
     });
   });
+
+  describe('Phase 2: Account-Integration Linking', () => {
+    describe('linkIntegration', () => {
+      it('should link integration to account', async () => {
+        firestoreService.getById.mockResolvedValue(mockAccount);
+        firestoreService.update.mockResolvedValue(undefined);
+
+        await repository.linkIntegration(mockOrganizationId, 'acc-1', 'int-1');
+
+        expect(firestoreService.update).toHaveBeenCalledWith(
+          'accounts',
+          'acc-1',
+          { integrationId: 'int-1' }
+        );
+      });
+
+      it('should throw NotFoundException when account not found', async () => {
+        firestoreService.getById.mockResolvedValue(null);
+
+        await expect(
+          repository.linkIntegration(mockOrganizationId, 'nonexistent', 'int-1')
+        ).rejects.toThrow(NotFoundException);
+      });
+
+      it('should throw NotFoundException when account belongs to different org', async () => {
+        firestoreService.getById.mockResolvedValue({
+          ...mockAccount,
+          organizationId: 'different-org',
+        });
+
+        await expect(
+          repository.linkIntegration(mockOrganizationId, 'acc-1', 'int-1')
+        ).rejects.toThrow(NotFoundException);
+      });
+    });
+
+    describe('unlinkIntegration', () => {
+      it('should unlink integration from account', async () => {
+        const linkedAccount = { ...mockAccount, integrationId: 'int-1' };
+        firestoreService.getById.mockResolvedValue(linkedAccount);
+        firestoreService.update.mockResolvedValue(undefined);
+
+        await repository.unlinkIntegration(mockOrganizationId, 'acc-1');
+
+        expect(firestoreService.update).toHaveBeenCalledWith(
+          'accounts',
+          'acc-1',
+          { integrationId: null }
+        );
+      });
+
+      it('should throw NotFoundException when account not found', async () => {
+        firestoreService.getById.mockResolvedValue(null);
+
+        await expect(
+          repository.unlinkIntegration(mockOrganizationId, 'nonexistent')
+        ).rejects.toThrow(NotFoundException);
+      });
+    });
+
+    describe('findByIntegrationId', () => {
+      it('should return accounts linked to an integration', async () => {
+        const linkedAccounts = [
+          { ...mockAccount, integrationId: 'int-1' },
+          { ...mockAccount, id: 'acc-2', handle: 'user2', integrationId: 'int-1' },
+        ];
+        firestoreService.query.mockResolvedValue(linkedAccounts);
+
+        const result = await repository.findByIntegrationId(mockOrganizationId, 'int-1');
+
+        expect(result).toEqual(linkedAccounts);
+        expect(firestoreService.query).toHaveBeenCalledWith(
+          'accounts',
+          expect.objectContaining({
+            where: expect.arrayContaining([
+              { field: 'organizationId', operator: '==', value: mockOrganizationId },
+              { field: 'integrationId', operator: '==', value: 'int-1' },
+              { field: 'deletedAt', operator: '==', value: null },
+            ]),
+          })
+        );
+      });
+
+      it('should return empty array when no accounts linked', async () => {
+        firestoreService.query.mockResolvedValue([]);
+
+        const result = await repository.findByIntegrationId(mockOrganizationId, 'int-no-accounts');
+
+        expect(result).toEqual([]);
+      });
+    });
+
+    describe('findBySoulIdAndPlatform', () => {
+      it('should return accounts matching soul and platform', async () => {
+        firestoreService.query.mockResolvedValue([mockAccount]);
+
+        const result = await repository.findBySoulIdAndPlatform(
+          mockOrganizationId,
+          'soul-1',
+          Platform.TWITTER
+        );
+
+        expect(result).toEqual([mockAccount]);
+        expect(firestoreService.query).toHaveBeenCalledWith(
+          'accounts',
+          expect.objectContaining({
+            where: expect.arrayContaining([
+              { field: 'organizationId', operator: '==', value: mockOrganizationId },
+              { field: 'soulId', operator: '==', value: 'soul-1' },
+              { field: 'platform', operator: '==', value: Platform.TWITTER },
+              { field: 'deletedAt', operator: '==', value: null },
+            ]),
+          })
+        );
+      });
+
+      it('should return empty array when no match found', async () => {
+        firestoreService.query.mockResolvedValue([]);
+
+        const result = await repository.findBySoulIdAndPlatform(
+          mockOrganizationId,
+          'soul-1',
+          Platform.INSTAGRAM
+        );
+
+        expect(result).toEqual([]);
+      });
+    });
+  });
 });

@@ -4,6 +4,7 @@ import { AccountService } from './account.service';
 import { AccountRepository } from './account.repository';
 import { SoulRepository } from '../souls/soul.repository';
 import { ProxyRepository } from '../proxies/proxy.repository';
+import { MatrixRepository } from '@gitroom/nestjs-libraries/database/prisma/matrix/matrix.repository';
 import {
   Platform,
   AccountStatus,
@@ -24,6 +25,7 @@ describe('AccountService', () => {
   let accountRepository: jest.Mocked<AccountRepository>;
   let soulRepository: jest.Mocked<SoulRepository>;
   let proxyRepository: jest.Mocked<ProxyRepository>;
+  let matrixRepository: jest.Mocked<MatrixRepository>;
 
   const mockSoul: Soul = {
     id: 'soul-1',
@@ -71,6 +73,7 @@ describe('AccountService', () => {
       findById: jest.fn(),
       findByHandle: jest.fn(),
       findBySoulId: jest.fn(),
+      findByProxyId: jest.fn(),
       findAll: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
@@ -79,6 +82,13 @@ describe('AccountService', () => {
       count: jest.fn(),
       countByStatus: jest.fn(),
       countByPlatform: jest.fn(),
+      countBySoulId: jest.fn(),
+      updateLastActivity: jest.fn(),
+      // Phase 2: Account-Integration linking methods
+      linkIntegration: jest.fn(),
+      unlinkIntegration: jest.fn(),
+      findByIntegrationId: jest.fn(),
+      findBySoulIdAndPlatform: jest.fn(),
     };
 
     const mockSoulRepository = {
@@ -93,12 +103,31 @@ describe('AccountService', () => {
       unassignAccount: jest.fn(),
     };
 
+    const mockMatrixRepository = {
+      getIntegration: jest.fn(),
+      integrationExists: jest.fn(),
+      findBySoulId: jest.fn(),
+      findByIntegrationId: jest.fn(),
+      findExisting: jest.fn(),
+      findById: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      bulkCreate: jest.fn(),
+      bulkDelete: jest.fn(),
+      setPrimary: jest.fn(),
+      getAllMappings: jest.fn(),
+      getAllMappingsLean: jest.fn(),
+      getAllIntegrations: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AccountService,
         { provide: AccountRepository, useValue: mockAccountRepository },
         { provide: SoulRepository, useValue: mockSoulRepository },
         { provide: ProxyRepository, useValue: mockProxyRepository },
+        { provide: MatrixRepository, useValue: mockMatrixRepository },
       ],
     }).compile();
 
@@ -106,6 +135,7 @@ describe('AccountService', () => {
     accountRepository = module.get(AccountRepository);
     soulRepository = module.get(SoulRepository);
     proxyRepository = module.get(ProxyRepository);
+    matrixRepository = module.get(MatrixRepository);
   });
 
   describe('create', () => {
@@ -357,6 +387,140 @@ describe('AccountService', () => {
       expect(result.byPlatform).toBeDefined();
       expect(Object.keys(result.byStatus).length).toBe(Object.keys(AccountStatus).length);
       expect(Object.keys(result.byPlatform).length).toBe(Object.keys(Platform).length);
+    });
+  });
+
+  // ===== Phase 2: Account-Integration Linking Tests =====
+
+  const mockIntegration = {
+    id: 'int-1',
+    name: '@testuser',
+    providerIdentifier: 'twitter',
+    picture: null,
+    type: 'social',
+    disabled: false,
+  };
+
+  describe('linkToIntegration', () => {
+    it('should link account when platform matches', async () => {
+      accountRepository.findById.mockResolvedValue(mockAccount); // platform: TWITTER
+      matrixRepository.getIntegration.mockResolvedValue(mockIntegration as any); // providerIdentifier: twitter
+      accountRepository.findByIntegrationId.mockResolvedValue(null);
+      accountRepository.linkIntegration.mockResolvedValue(undefined);
+      accountRepository.findById.mockResolvedValue({ ...mockAccount, integrationId: 'int-1' } as any);
+
+      const result = await service.linkToIntegration('org-1', 'acc-1', 'int-1');
+
+      expect(accountRepository.linkIntegration).toHaveBeenCalledWith('org-1', 'acc-1', 'int-1');
+    });
+
+    it('should throw NotFoundException when account not found', async () => {
+      accountRepository.findById.mockResolvedValue(null);
+
+      await expect(service.linkToIntegration('org-1', 'bad-id', 'int-1')).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw NotFoundException when integration not found', async () => {
+      accountRepository.findById.mockResolvedValue(mockAccount);
+      matrixRepository.getIntegration.mockResolvedValue(null);
+
+      await expect(service.linkToIntegration('org-1', 'acc-1', 'bad-int')).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException on platform mismatch', async () => {
+      accountRepository.findById.mockResolvedValue(mockAccount); // TWITTER
+      matrixRepository.getIntegration.mockResolvedValue({
+        ...mockIntegration,
+        providerIdentifier: 'instagram', // MISMATCH
+      } as any);
+
+      await expect(service.linkToIntegration('org-1', 'acc-1', 'int-1')).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw ConflictException when integration already linked to another account', async () => {
+      accountRepository.findById.mockResolvedValue(mockAccount);
+      matrixRepository.getIntegration.mockResolvedValue(mockIntegration as any);
+      accountRepository.findByIntegrationId.mockResolvedValue({ ...mockAccount, id: 'other-acc' } as any);
+
+      await expect(service.linkToIntegration('org-1', 'acc-1', 'int-1')).rejects.toThrow(ConflictException);
+    });
+  });
+
+  describe('unlinkFromIntegration', () => {
+    it('should unlink when account has integration', async () => {
+      accountRepository.findById.mockResolvedValue({ ...mockAccount, integrationId: 'int-1' } as any);
+      accountRepository.unlinkIntegration.mockResolvedValue(undefined);
+      accountRepository.findById.mockResolvedValue(mockAccount);
+
+      await service.unlinkFromIntegration('org-1', 'acc-1');
+
+      expect(accountRepository.unlinkIntegration).toHaveBeenCalledWith('org-1', 'acc-1');
+    });
+
+    it('should throw NotFoundException when account not found', async () => {
+      accountRepository.findById.mockResolvedValue(null);
+
+      await expect(service.unlinkFromIntegration('org-1', 'bad-id')).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException when not linked', async () => {
+      accountRepository.findById.mockResolvedValue(mockAccount); // no integrationId
+
+      await expect(service.unlinkFromIntegration('org-1', 'acc-1')).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('autoLinkByHandle', () => {
+    it('should match account by exact handle', async () => {
+      matrixRepository.getIntegration.mockResolvedValue(mockIntegration as any);
+      accountRepository.findBySoulIdAndPlatform.mockResolvedValue([
+        { ...mockAccount, handle: 'testuser' },
+      ]);
+      accountRepository.findByIntegrationId.mockResolvedValue(null);
+      accountRepository.linkIntegration.mockResolvedValue(undefined);
+
+      const result = await service.autoLinkByHandle('org-1', 'soul-1', 'int-1');
+
+      expect(result).toBe('acc-1');
+      expect(accountRepository.linkIntegration).toHaveBeenCalled();
+    });
+
+    it('should fallback to first unlinked account when no exact match', async () => {
+      matrixRepository.getIntegration.mockResolvedValue({ ...mockIntegration, name: 'nomatch' } as any);
+      accountRepository.findBySoulIdAndPlatform.mockResolvedValue([mockAccount]);
+      accountRepository.findByIntegrationId.mockResolvedValue(null);
+      accountRepository.linkIntegration.mockResolvedValue(undefined);
+
+      const result = await service.autoLinkByHandle('org-1', 'soul-1', 'int-1');
+
+      expect(result).toBe('acc-1');
+    });
+
+    it('should return null when no accounts match platform', async () => {
+      matrixRepository.getIntegration.mockResolvedValue(mockIntegration as any);
+      accountRepository.findBySoulIdAndPlatform.mockResolvedValue([]);
+
+      const result = await service.autoLinkByHandle('org-1', 'soul-1', 'int-1');
+
+      expect(result).toBeNull();
+    });
+
+    it('should return existing ID when integration already linked', async () => {
+      matrixRepository.getIntegration.mockResolvedValue(mockIntegration as any);
+      accountRepository.findBySoulIdAndPlatform.mockResolvedValue([mockAccount]);
+      accountRepository.findByIntegrationId.mockResolvedValue({ ...mockAccount, id: 'existing-acc' } as any);
+
+      const result = await service.autoLinkByHandle('org-1', 'soul-1', 'int-1');
+
+      expect(result).toBe('existing-acc');
+    });
+
+    it('should return null when integration not found', async () => {
+      matrixRepository.getIntegration.mockResolvedValue(null);
+
+      const result = await service.autoLinkByHandle('org-1', 'soul-1', 'bad-int');
+
+      expect(result).toBeNull();
     });
   });
 });
