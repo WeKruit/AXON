@@ -317,41 +317,33 @@ export function useAxonAnalytics(config?: SWRConfiguration) {
 }
 
 /**
- * Link account to integration response
- */
-interface LinkAccountResult {
-  success: boolean;
-  account: Account;
-}
-
-/**
  * Hook for account-integration linking operations
  * Provides methods to link and unlink accounts from integrations
+ * Uses PATCH /axon/accounts/:id/integration endpoint (matches backend PR #14)
  */
 export function useAccountIntegrationMutations() {
   const fetch = useFetch();
 
   const linkAccountToIntegration = useCallback(
     async (accountId: string, integrationId: string): Promise<Account> => {
-      const response = await fetch(`/axon/accounts/${accountId}/link`, {
-        method: 'POST',
+      const response = await fetch(`/axon/accounts/${accountId}/integration`, {
+        method: 'PATCH',
         body: JSON.stringify({ integrationId }),
       });
       if (!response.ok) throw new Error('Failed to link account to integration');
-      const result: LinkAccountResult = await response.json();
-      return result.account;
+      return response.json() as Promise<Account>;
     },
     [fetch]
   );
 
   const unlinkAccountFromIntegration = useCallback(
     async (accountId: string): Promise<Account> => {
-      const response = await fetch(`/axon/accounts/${accountId}/unlink`, {
-        method: 'POST',
+      const response = await fetch(`/axon/accounts/${accountId}/integration`, {
+        method: 'PATCH',
+        body: JSON.stringify({ integrationId: null }),
       });
       if (!response.ok) throw new Error('Failed to unlink account from integration');
-      const result: LinkAccountResult = await response.json();
-      return result.account;
+      return response.json() as Promise<Account>;
     },
     [fetch]
   );

@@ -32,6 +32,16 @@ export interface AccountIntegrationRef {
   picture?: string;
 }
 
+/**
+ * Account link info for displaying in matrix cell tooltip
+ * Shows which accounts within a Soul are linked to an integration
+ */
+export interface AccountLinkInfo {
+  accountId: string;
+  username: string;
+  isLinked: boolean;
+}
+
 export interface Account {
   id: string;
   soulId: string;
