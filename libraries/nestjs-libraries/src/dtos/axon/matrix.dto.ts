@@ -186,6 +186,9 @@ export class MappingResponseDto {
   @ApiPropertyOptional({ description: 'User who created the mapping' })
   createdBy?: string;
 
+  @ApiPropertyOptional({ description: 'Linked Account ID (from Firestore)' })
+  accountId?: string;
+
   @ApiProperty({ description: 'Created timestamp' })
   createdAt: Date;
 

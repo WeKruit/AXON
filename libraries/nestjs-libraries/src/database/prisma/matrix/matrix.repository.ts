@@ -116,7 +116,8 @@ export class MatrixRepository {
   async create(
     organizationId: string,
     dto: CreateMappingDto,
-    createdBy?: string
+    createdBy?: string,
+    accountId?: string
   ): Promise<SoulIntegrationMapping> {
     return this._soulIntegrationMapping.model.soulIntegrationMapping.create({
       data: {
@@ -127,6 +128,41 @@ export class MatrixRepository {
         priority: dto.priority ?? 0,
         notes: dto.notes,
         createdBy,
+        accountId,
+      },
+    });
+  }
+
+  /**
+   * Update accountId on a mapping
+   */
+  async updateAccountId(
+    organizationId: string,
+    id: string,
+    accountId: string | null
+  ): Promise<SoulIntegrationMapping> {
+    return this._soulIntegrationMapping.model.soulIntegrationMapping.update({
+      where: {
+        id,
+        organizationId,
+      },
+      data: {
+        accountId,
+      },
+    });
+  }
+
+  /**
+   * Find mappings by accountId
+   */
+  async findByAccountId(
+    organizationId: string,
+    accountId: string
+  ): Promise<SoulIntegrationMapping[]> {
+    return this._soulIntegrationMapping.model.soulIntegrationMapping.findMany({
+      where: {
+        organizationId,
+        accountId,
       },
     });
   }
@@ -230,7 +266,7 @@ export class MatrixRepository {
    */
   async bulkCreate(
     organizationId: string,
-    items: BulkMappingItem[],
+    items: Array<BulkMappingItem & { accountId?: string }>,
     createdBy?: string
   ): Promise<{ succeeded: number; failed: number; createdIds: string[]; errors: Array<{ soulId: string; integrationId: string; error: string }> }> {
     const result = {
@@ -250,6 +286,7 @@ export class MatrixRepository {
             priority: item.priority ?? 0,
             notes: item.notes,
             createdBy,
+            accountId: item.accountId,
           },
         });
         result.succeeded++;

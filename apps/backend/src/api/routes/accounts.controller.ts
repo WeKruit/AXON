@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Put,
+  Patch,
   Query,
   HttpCode,
   HttpStatus,
@@ -23,6 +24,7 @@ import {
   BulkImportResultDto,
   UpdateAccountStatusDto,
   AssignAccountProxyDto,
+  LinkAccountIntegrationDto,
   Platform,
   AccountStatus,
 } from '@gitroom/nestjs-libraries/dtos/axon';
@@ -154,6 +156,26 @@ export class AccountsController {
     @Body() dto: AssignAccountProxyDto
   ): Promise<AccountResponseDto> {
     return this.accountService.assignProxy(organization.id, id, dto.proxyId ?? null);
+  }
+
+  @Patch('/:id/integration')
+  @ApiOperation({ summary: 'Link or unlink account to/from a Postiz integration' })
+  @ApiParam({ name: 'id', description: 'Account ID' })
+  @ApiResponse({ status: 200, description: 'Integration link updated', type: AccountResponseDto })
+  @ApiResponse({ status: 400, description: 'Platform mismatch or account not linked' })
+  @ApiResponse({ status: 404, description: 'Account or integration not found' })
+  @ApiResponse({ status: 409, description: 'Integration already linked to another account' })
+  async linkIntegration(
+    @GetOrgFromRequest() organization: Organization,
+    @Param('id') id: string,
+    @Body() dto: LinkAccountIntegrationDto
+  ): Promise<AccountResponseDto> {
+    if (dto.integrationId === null || dto.integrationId === undefined) {
+      // Unlink the integration
+      return this.accountService.unlinkFromIntegration(organization.id, id);
+    }
+    // Link to the integration
+    return this.accountService.linkToIntegration(organization.id, id, dto.integrationId);
   }
 
   @Delete('/:id')
