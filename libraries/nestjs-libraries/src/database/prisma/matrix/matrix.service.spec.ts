@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MatrixService } from './matrix.service';
 import { MatrixRepository } from './matrix.repository';
 import { SoulRepository } from '@gitroom/nestjs-libraries/database/firestore/collections/souls/soul.repository';
+import { AccountService } from '@gitroom/nestjs-libraries/database/firestore/collections/accounts/account.service';
 import { NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { BulkOperationType } from '@gitroom/nestjs-libraries/dtos/axon';
 
@@ -38,6 +39,7 @@ describe('MatrixService', () => {
     priority: 0,
     notes: null,
     createdBy: mockUserId,
+    accountId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     integration: mockIntegration,
@@ -46,13 +48,16 @@ describe('MatrixService', () => {
   beforeEach(async () => {
     const mockMatrixRepository = {
       getAllMappings: jest.fn(),
+      getAllMappingsLean: jest.fn(),
       getAllIntegrations: jest.fn(),
       findBySoulId: jest.fn(),
       findByIntegrationId: jest.fn(),
+      findByAccountId: jest.fn(),
       findExisting: jest.fn(),
       findById: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      updateAccountId: jest.fn(),
       delete: jest.fn(),
       bulkCreate: jest.fn(),
       bulkDelete: jest.fn(),
@@ -66,11 +71,19 @@ describe('MatrixService', () => {
       findById: jest.fn(),
     };
 
+    const mockAccountService = {
+      autoLinkByHandle: jest.fn().mockResolvedValue(null),
+      linkToIntegration: jest.fn(),
+      unlinkFromIntegration: jest.fn(),
+      findByIntegrationId: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MatrixService,
         { provide: MatrixRepository, useValue: mockMatrixRepository },
         { provide: SoulRepository, useValue: mockSoulRepository },
+        { provide: AccountService, useValue: mockAccountService },
       ],
     }).compile();
 

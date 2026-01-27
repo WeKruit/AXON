@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   ConflictException,
   BadRequestException,
@@ -27,6 +28,8 @@ import {
 
 @Injectable()
 export class MatrixService {
+  private readonly logger = new Logger(MatrixService.name);
+
   constructor(
     private readonly matrixRepository: MatrixRepository,
     private readonly soulRepository: SoulRepository,
@@ -211,8 +214,8 @@ export class MatrixService {
         dto.soulId,
         dto.integrationId
       )) ?? undefined;
-    } catch {
-      // Silently fail auto-linking, don't block mapping creation
+    } catch (error) {
+      this.logger.warn(`Auto-link failed for soul=${dto.soulId} integration=${dto.integrationId}: ${error}`);
     }
 
     const mapping = await this.matrixRepository.create(
@@ -404,8 +407,8 @@ export class MatrixService {
               item.soulId,
               item.integrationId
             )) ?? undefined;
-          } catch {
-            // Silently fail auto-linking
+          } catch (error) {
+            this.logger.warn(`Auto-link failed for soul=${item.soulId} integration=${item.integrationId}: ${error}`);
           }
           return { ...item, accountId };
         })
