@@ -4,6 +4,7 @@ import { AccountService } from './account.service';
 import { AccountRepository } from './account.repository';
 import { SoulRepository } from '../souls/soul.repository';
 import { ProxyRepository } from '../proxies/proxy.repository';
+import { MatrixRepository } from '@gitroom/nestjs-libraries/database/prisma/matrix/matrix.repository';
 import {
   Platform,
   AccountStatus,
@@ -45,6 +46,7 @@ describe('AccountService', () => {
     displayName: 'Test User',
     status: AccountStatus.ACTIVE,
     credentials: {},
+    integrationId: undefined,
     tags: [],
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -71,11 +73,15 @@ describe('AccountService', () => {
       findById: jest.fn(),
       findByHandle: jest.fn(),
       findBySoulId: jest.fn(),
+      findByIntegrationId: jest.fn(),
+      findBySoulIdAndPlatform: jest.fn(),
       findAll: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
       updateStatus: jest.fn(),
       assignProxy: jest.fn(),
+      linkIntegration: jest.fn(),
+      unlinkIntegration: jest.fn(),
       count: jest.fn(),
       countByStatus: jest.fn(),
       countByPlatform: jest.fn(),
@@ -93,12 +99,19 @@ describe('AccountService', () => {
       unassignAccount: jest.fn(),
     };
 
+    const mockMatrixRepository = {
+      getIntegration: jest.fn(),
+      findByAccountId: jest.fn(),
+      updateAccountId: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AccountService,
         { provide: AccountRepository, useValue: mockAccountRepository },
         { provide: SoulRepository, useValue: mockSoulRepository },
         { provide: ProxyRepository, useValue: mockProxyRepository },
+        { provide: MatrixRepository, useValue: mockMatrixRepository },
       ],
     }).compile();
 
