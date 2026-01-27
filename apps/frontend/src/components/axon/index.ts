@@ -19,6 +19,7 @@ export { CreateSoulModal } from './souls/create-soul-modal';
 export { AccountsListComponent } from './accounts/accounts-list.component';
 export { AccountDetailComponent } from './accounts/account-detail.component';
 export { AddAccountModal } from './accounts/add-account-modal';
+export { AccountIntegrationLink, IntegrationLinkIndicator } from './accounts/account-integration-link';
 
 // Persona Components
 export { PersonasListComponent } from './personas/personas-list.component';

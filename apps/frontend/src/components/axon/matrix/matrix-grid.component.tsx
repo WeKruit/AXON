@@ -4,16 +4,18 @@ import React, { FC, memo, useCallback, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { MatrixCell, MatrixHeaderCell, MatrixCellSkeleton } from './matrix-cell.component';
 import { CheckIcon, GridIcon, StarFilledIcon, LinkIcon, UnlinkIcon } from '../ui/icons';
-import type { Soul } from '../types';
+import type { Soul, Account } from '../types';
 import type {
   Integration,
   SoulIntegrationMapping,
   MatrixData,
   MatrixFilters,
+  LinkedAccountInfo,
 } from './types';
 
 export interface MatrixGridProps {
   data: MatrixData | null;
+  accounts?: Account[];
   isLoading?: boolean;
   filters?: MatrixFilters;
   onToggleMapping: (soulId: string, integrationId: string) => Promise<void>;
@@ -51,10 +53,30 @@ const matrixRowStyles: React.CSSProperties = {
  * Individual matrix row component with content-visibility optimization
  * Memoized to prevent unnecessary re-renders when other rows change
  */
+/**
+ * Build a map of soulId-integrationId -> LinkedAccountInfo for accounts linked to integrations
+ */
+function buildAccountLinkMap(accounts: Account[]): Map<string, LinkedAccountInfo> {
+  const map = new Map<string, LinkedAccountInfo>();
+  for (const account of accounts) {
+    if (account.integrationId) {
+      const key = `${account.soulId}-${account.integrationId}`;
+      // Store the account info
+      map.set(key, {
+        id: account.id,
+        username: account.username,
+        platform: account.platform,
+      });
+    }
+  }
+  return map;
+}
+
 interface MatrixRowProps {
   soul: Soul;
   integrations: Integration[];
   cellMap: Map<string, SoulIntegrationMapping>;
+  accountLinkMap: Map<string, LinkedAccountInfo>;
   bulkMode: boolean;
   selectedCells: Set<string>;
   onToggleMapping: (soulId: string, integrationId: string) => Promise<void>;
@@ -66,6 +88,7 @@ const MatrixRow: FC<MatrixRowProps> = memo(({
   soul,
   integrations,
   cellMap,
+  accountLinkMap,
   bulkMode,
   selectedCells,
   onToggleMapping,
@@ -86,12 +109,14 @@ const MatrixRow: FC<MatrixRowProps> = memo(({
     {integrations.map((integration) => {
       const cellKey = getCellKeyFn(soul.id, integration.id);
       const mapping = cellMap.get(cellKey) ?? null;
+      const linkedAccount = accountLinkMap.get(cellKey);
       return (
         <div key={cellKey} style={matrixRowStyles}>
           <MatrixCell
             soulId={soul.id}
             integrationId={integration.id}
             mapping={mapping}
+            linkedAccount={linkedAccount}
             bulkMode={bulkMode}
             isSelected={selectedCells.has(cellKey)}
             onToggle={onToggleMapping}
@@ -108,6 +133,7 @@ MatrixRow.displayName = 'MatrixRow';
 
 export const MatrixGrid: FC<MatrixGridProps> = memo(({
   data,
+  accounts = [],
   isLoading = false,
   filters,
   onToggleMapping,
@@ -123,6 +149,11 @@ export const MatrixGrid: FC<MatrixGridProps> = memo(({
     if (!data?.mappings) return new Map<string, SoulIntegrationMapping>();
     return buildCellMapFn(data.mappings);
   }, [data?.mappings]);
+
+  // Build account link map for showing which accounts are linked to integrations
+  const accountLinkMap = useMemo(() => {
+    return buildAccountLinkMap(accounts);
+  }, [accounts]);
 
   // Apply filters
   const filteredData = useMemo(() => {
@@ -307,7 +338,7 @@ export const MatrixGrid: FC<MatrixGridProps> = memo(({
       )}
 
       {/* Legend */}
-      <div className="flex items-center gap-6 text-sm">
+      <div className="flex items-center gap-6 text-sm flex-wrap">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded border-2 border-newBgLineColor bg-newBgColor" />
           <span className="text-textItemBlur">Not Connected</span>
@@ -323,6 +354,12 @@ export const MatrixGrid: FC<MatrixGridProps> = memo(({
             <StarFilledIcon size={10} className="text-yellow-500" />
           </div>
           <span className="text-textItemBlur">Primary</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative w-4 h-4 rounded border-2 border-newBgLineColor bg-newBgColor">
+            <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-500 border border-newBgColor" />
+          </div>
+          <span className="text-textItemBlur">Account Linked</span>
         </div>
       </div>
 
@@ -357,6 +394,7 @@ export const MatrixGrid: FC<MatrixGridProps> = memo(({
                 soul={soul}
                 integrations={integrations}
                 cellMap={cellMap}
+                accountLinkMap={accountLinkMap}
                 bulkMode={bulkMode}
                 selectedCells={selectedCells}
                 onToggleMapping={onToggleMapping}
