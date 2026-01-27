@@ -42,12 +42,13 @@ export class SlackProvider extends SocialAbstract implements SocialProvider {
       username: '',
     };
   }
-  async generateAuthUrl() {
+  async generateAuthUrl(clientInformation?: { client_id: string; client_secret: string; instanceUrl: string }) {
+    const clientId = clientInformation?.client_id || process.env.SLACK_ID;
     const state = makeId(6);
 
     return {
       url: `https://slack.com/oauth/v2/authorize?client_id=${
-        process.env.SLACK_ID
+        clientId
       }&redirect_uri=${encodeURIComponent(
         `${
           process?.env?.FRONTEND_URL?.indexOf('https') === -1
@@ -64,7 +65,7 @@ export class SlackProvider extends SocialAbstract implements SocialProvider {
     code: string;
     codeVerifier: string;
     refresh?: string;
-  }) {
+  }, clientInformation?: { client_id: string; client_secret: string; instanceUrl: string }) {
     const { access_token, team, bot_user_id, scope } = await (
       await this.fetch(`https://slack.com/api/oauth.v2.access`, {
         method: 'POST',
@@ -72,8 +73,8 @@ export class SlackProvider extends SocialAbstract implements SocialProvider {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: new URLSearchParams({
-          client_id: process.env.SLACK_ID!,
-          client_secret: process.env.SLACK_SECRET!,
+          client_id: clientInformation?.client_id || process.env.SLACK_ID!,
+          client_secret: clientInformation?.client_secret || process.env.SLACK_SECRET!,
           code: params.code,
           redirect_uri: `${
             process?.env?.FRONTEND_URL?.indexOf('https') === -1

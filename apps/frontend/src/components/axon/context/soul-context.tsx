@@ -7,6 +7,7 @@ interface SoulContextValue {
   // Currently selected soul (null = "All Souls" view)
   selectedSoul: Soul | null;
   selectedSoulId: string | null;
+  parentOrgId: string | null;
 
   // Actions
   selectSoul: (soul: Soul | null) => void;
@@ -47,6 +48,7 @@ interface SoulContextProviderProps {
 export function SoulContextProvider({ children, initialSoulId }: SoulContextProviderProps) {
   const [selectedSoul, setSelectedSoul] = useState<Soul | null>(null);
   const [selectedSoulId, setSelectedSoulId] = useState<string | null>(initialSoulId || null);
+  const [parentOrgId, setParentOrgId] = useState<string | null>(null);
 
   // Hydrate from localStorage on mount (client-side only)
   useEffect(() => {
@@ -88,11 +90,12 @@ export function SoulContextProvider({ children, initialSoulId }: SoulContextProv
   const value = useMemo<SoulContextValue>(() => ({
     selectedSoul,
     selectedSoulId,
+    parentOrgId,
     selectSoul,
     selectSoulById,
     clearSelection,
     isAllSoulsView,
-  }), [selectedSoul, selectedSoulId, selectSoul, selectSoulById, clearSelection, isAllSoulsView]);
+  }), [selectedSoul, selectedSoulId, parentOrgId, selectSoul, selectSoulById, clearSelection, isAllSoulsView]);
 
   return (
     <SoulContext.Provider value={value}>

@@ -39,6 +39,7 @@ import {
 } from '@gitroom/backend/services/auth/permissions/permission.exception.class';
 import { uniqBy } from 'lodash';
 import { RefreshIntegrationService } from '@gitroom/nestjs-libraries/integrations/refresh.integration.service';
+import { CredentialResolverService } from '@gitroom/nestjs-libraries/integrations/credential-resolver.service';
 
 @ApiTags('Integrations')
 @Controller('/integrations')
@@ -47,7 +48,8 @@ export class IntegrationsController {
     private _integrationManager: IntegrationManager,
     private _integrationService: IntegrationService,
     private _postService: PostsService,
-    private _refreshIntegrationService: RefreshIntegrationService
+    private _refreshIntegrationService: RefreshIntegrationService,
+    private _credentialResolver: CredentialResolverService,
   ) {}
   @Get('/')
   getIntegrations() {
@@ -190,12 +192,27 @@ export class IntegrationsController {
     );
   }
 
+  // TODO: Implement proxied OAuth connection for souls.
+  // This endpoint will allow a soul to connect a channel using the platform's
+  // shared OAuth app (proxy) instead of the soul's own credentials.
+  // The proxy flow will: resolve the platform's shared app creds, generate the
+  // auth URL, and tag the resulting integration as proxy-connected.
+  @Post('/social/:integration/proxy-connect')
+  @CheckPolicies([AuthorizationActions.Create, Sections.CHANNEL])
+  async proxyConnect(
+    @Param('integration') integration: string,
+    @GetOrgFromRequest() org: Organization,
+  ) {
+    throw new HttpException('Proxy connection not yet implemented', 501);
+  }
+
   @Get('/social/:integration')
   @CheckPolicies([AuthorizationActions.Create, Sections.CHANNEL])
   async getIntegrationUrl(
     @Param('integration') integration: string,
     @Query('refresh') refresh: string,
-    @Query('externalUrl') externalUrl: string
+    @Query('externalUrl') externalUrl: string,
+    @GetOrgFromRequest() org: Organization,
   ) {
     if (
       !this._integrationManager
@@ -213,12 +230,15 @@ export class IntegrationsController {
     }
 
     try {
+      // Resolve soul credentials if operating in a soul-org context
+      const soulCredentials = await this._credentialResolver.resolveCredentials(org, integration);
+
       const getExternalUrl = integrationProvider.externalUrl
         ? {
             ...(await integrationProvider.externalUrl(externalUrl)),
             instanceUrl: externalUrl,
           }
-        : undefined;
+        : soulCredentials || undefined;
 
       const { codeVerifier, state, url } =
         await integrationProvider.generateAuthUrl(getExternalUrl);

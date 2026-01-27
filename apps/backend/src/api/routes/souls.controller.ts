@@ -12,7 +12,8 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { GetOrgFromRequest } from '@gitroom/nestjs-libraries/user/org.from.request';
-import { Organization } from '@prisma/client';
+import { GetUserFromRequest } from '@gitroom/nestjs-libraries/user/user.from.request';
+import { Organization, User } from '@prisma/client';
 import { SoulService } from '@gitroom/nestjs-libraries/database/firestore/collections/souls/soul.service';
 import {
   CreateSoulDto,
@@ -34,9 +35,10 @@ export class SoulsController {
   @ApiResponse({ status: 409, description: 'Soul with email/phone already exists' })
   async create(
     @GetOrgFromRequest() organization: Organization,
+    @GetUserFromRequest() user: User,
     @Body() dto: CreateSoulDto
   ): Promise<SoulResponseDto> {
-    return this.soulService.create(organization.id, dto);
+    return this.soulService.create(organization.id, dto, user.id);
   }
 
   @Get('/')
@@ -88,6 +90,18 @@ export class SoulsController {
     @Body() dto: UpdateSoulDto
   ): Promise<SoulResponseDto> {
     return this.soulService.update(organization.id, id, dto);
+  }
+
+  @Post('/:id/ensure-org')
+  @ApiOperation({ summary: 'Ensure a soul-org exists for this soul (creates one if missing)' })
+  @ApiParam({ name: 'id', description: 'Soul ID' })
+  @ApiResponse({ status: 200, description: 'Soul with soulOrgId', type: SoulResponseDto })
+  async ensureSoulOrg(
+    @GetOrgFromRequest() organization: Organization,
+    @GetUserFromRequest() user: User,
+    @Param('id') id: string
+  ): Promise<SoulResponseDto> {
+    return this.soulService.ensureSoulOrg(organization.id, id, user.id);
   }
 
   @Delete('/:id')

@@ -87,6 +87,7 @@ export interface Soul extends FirestoreDocument {
   personaId?: string;
   proxyId?: string;
   accountIds: string[];
+  soulOrgId?: string;
   metadata?: Record<string, unknown>;
   // Legacy fields
   type?: SoulType;
@@ -285,6 +286,9 @@ export class SoulResponseDto {
 
   @ApiPropertyOptional({ description: 'Number of associated accounts' })
   accountCount?: number;
+
+  @ApiPropertyOptional({ description: 'Associated soul organization ID' })
+  soulOrgId?: string;
 
   @ApiPropertyOptional({ description: 'Additional metadata' })
   metadata?: Record<string, unknown>;

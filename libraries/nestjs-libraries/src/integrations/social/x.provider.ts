@@ -230,10 +230,12 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     };
   }
 
-  async generateAuthUrl() {
+  async generateAuthUrl(clientInformation?: { client_id: string; client_secret: string; instanceUrl: string }) {
+    const appKey = clientInformation?.client_id || process.env.X_API_KEY!;
+    const appSecret = clientInformation?.client_secret || process.env.X_API_SECRET!;
     const client = new TwitterApi({
-      appKey: process.env.X_API_KEY!,
-      appSecret: process.env.X_API_SECRET!,
+      appKey,
+      appSecret,
     });
     const { url, oauth_token, oauth_token_secret } =
       await client.generateAuthLink(
@@ -252,13 +254,16 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     };
   }
 
-  async authenticate(params: { code: string; codeVerifier: string }) {
+  async authenticate(params: { code: string; codeVerifier: string }, clientInformation?: { client_id: string; client_secret: string; instanceUrl: string }) {
     const { code, codeVerifier } = params;
     const [oauth_token, oauth_token_secret] = codeVerifier.split(':');
 
+    const appKey = clientInformation?.client_id || process.env.X_API_KEY!;
+    const appSecret = clientInformation?.client_secret || process.env.X_API_SECRET!;
+
     const startingClient = new TwitterApi({
-      appKey: process.env.X_API_KEY!,
-      appSecret: process.env.X_API_SECRET!,
+      appKey,
+      appSecret,
       accessToken: oauth_token,
       accessSecret: oauth_token_secret,
     });

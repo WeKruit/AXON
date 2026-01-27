@@ -262,13 +262,14 @@ export class TiktokProvider extends SocialAbstract implements SocialProvider {
     };
   }
 
-  async generateAuthUrl() {
+  async generateAuthUrl(clientInformation?: { client_id: string; client_secret: string; instanceUrl: string }) {
+    const clientKey = clientInformation?.client_id || process.env.TIKTOK_CLIENT_ID;
     const state = Math.random().toString(36).substring(2);
 
     return {
       url:
         'https://www.tiktok.com/v2/auth/authorize/' +
-        `?client_key=${process.env.TIKTOK_CLIENT_ID}` +
+        `?client_key=${clientKey}` +
         `&redirect_uri=${encodeURIComponent(
           `${
             process?.env?.FRONTEND_URL?.indexOf('https') === -1
@@ -288,10 +289,10 @@ export class TiktokProvider extends SocialAbstract implements SocialProvider {
     code: string;
     codeVerifier: string;
     refresh?: string;
-  }) {
+  }, clientInformation?: { client_id: string; client_secret: string; instanceUrl: string }) {
     const value = {
-      client_key: process.env.TIKTOK_CLIENT_ID!,
-      client_secret: process.env.TIKTOK_CLIENT_SECRET!,
+      client_key: clientInformation?.client_id || process.env.TIKTOK_CLIENT_ID!,
+      client_secret: clientInformation?.client_secret || process.env.TIKTOK_CLIENT_SECRET!,
       code: params.code,
       grant_type: 'authorization_code',
       code_verifier: params.codeVerifier,

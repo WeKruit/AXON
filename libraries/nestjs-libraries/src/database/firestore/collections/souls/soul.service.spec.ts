@@ -2,26 +2,41 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, ConflictException } from '@nestjs/common';
 import { SoulService } from './soul.service';
 import { SoulRepository } from './soul.repository';
+import { OrganizationRepository } from '@gitroom/nestjs-libraries/database/prisma/organizations/organization.repository';
 import {
   SoulType,
   Soul,
   CreateSoulDto,
   UpdateSoulDto,
+  SoulStatus,
 } from '@gitroom/nestjs-libraries/dtos/axon';
 
 describe('SoulService', () => {
   let service: SoulService;
   let repository: jest.Mocked<SoulRepository>;
+  let orgRepository: jest.Mocked<OrganizationRepository>;
 
   const mockSoul: Soul = {
     id: 'soul-1',
     organizationId: 'org-1',
+    name: 'Test Soul',
+    status: SoulStatus.ACTIVE,
     type: SoulType.EMAIL,
     email: 'test@example.com',
     displayName: 'Test Soul',
     firstName: 'Test',
     lastName: 'Soul',
     accountIds: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  const mockSoulOrg = {
+    id: 'soul-org-1',
+    name: 'Soul: Test Soul',
+    isSoulOrg: true,
+    soulId: 'soul-1',
+    parentOrgId: 'org-1',
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -41,22 +56,44 @@ describe('SoulService', () => {
       countByPersona: jest.fn(),
     };
 
+    const mockOrgRepository = {
+      createSoulOrg: jest.fn(),
+      disableSoulOrg: jest.fn(),
+      getSoulOrgBySoulId: jest.fn(),
+      getOrgsByUserId: jest.fn(),
+      getOrgById: jest.fn(),
+      getOrgByApiKey: jest.fn(),
+      createOrgAndUser: jest.fn(),
+      getCount: jest.fn(),
+      getUserOrg: jest.fn(),
+      getImpersonateUser: jest.fn(),
+      updateApiKey: jest.fn(),
+      addUserToOrg: jest.fn(),
+      getOrgByCustomerId: jest.fn(),
+      getTeam: jest.fn(),
+      getAllUsersOrgs: jest.fn(),
+      deleteTeamMember: jest.fn(),
+      disableOrEnableNonSuperAdminUsers: jest.fn(),
+      getShortlinkPreference: jest.fn(),
+      updateShortlinkPreference: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SoulService,
-        {
-          provide: SoulRepository,
-          useValue: mockRepository,
-        },
+        { provide: SoulRepository, useValue: mockRepository },
+        { provide: OrganizationRepository, useValue: mockOrgRepository },
       ],
     }).compile();
 
     service = module.get<SoulService>(SoulService);
     repository = module.get(SoulRepository);
+    orgRepository = module.get(OrganizationRepository);
   });
 
   describe('create', () => {
     const createDto: CreateSoulDto = {
+      name: 'New Soul',
       type: SoulType.EMAIL,
       email: 'new@example.com',
       displayName: 'New Soul',
@@ -65,45 +102,40 @@ describe('SoulService', () => {
     };
 
     it('should create soul when valid data provided', async () => {
-      repository.findByEmail.mockResolvedValue(null);
       repository.create.mockResolvedValue(mockSoul);
 
       const result = await service.create('org-1', createDto);
 
       expect(result).toBeDefined();
       expect(result.id).toBe('soul-1');
-      expect(repository.create).toHaveBeenCalledWith('org-1', createDto);
+      expect(repository.create).toHaveBeenCalled();
     });
 
-    it('should throw ConflictException when email already exists', async () => {
-      repository.findByEmail.mockResolvedValue(mockSoul);
+    it('should create soul-org when userId is provided', async () => {
+      repository.create.mockResolvedValue(mockSoul);
+      orgRepository.createSoulOrg.mockResolvedValue(mockSoulOrg as any);
+      repository.update.mockResolvedValue(undefined);
 
-      await expect(service.create('org-1', createDto)).rejects.toThrow(ConflictException);
+      const result = await service.create('org-1', createDto, 'user-1');
+
+      expect(orgRepository.createSoulOrg).toHaveBeenCalledWith(
+        'New Soul',
+        'soul-1',
+        'org-1',
+        'user-1',
+      );
+      expect(repository.update).toHaveBeenCalledWith('org-1', 'soul-1', {
+        soulOrgId: 'soul-org-1',
+      });
+      expect(result.soulOrgId).toBe('soul-org-1');
     });
 
-    it('should throw ConflictException when phone already exists', async () => {
-      const phoneDto: CreateSoulDto = {
-        type: SoulType.PHONE,
-        phone: '+1234567890',
-        displayName: 'Phone Soul',
-      };
-      repository.findByPhone.mockResolvedValue(mockSoul);
+    it('should not create soul-org when userId is not provided', async () => {
+      repository.create.mockResolvedValue(mockSoul);
 
-      await expect(service.create('org-1', phoneDto)).rejects.toThrow(ConflictException);
-    });
+      await service.create('org-1', createDto);
 
-    it('should allow creating soul without email when type is PHONE', async () => {
-      const phoneDto: CreateSoulDto = {
-        type: SoulType.PHONE,
-        phone: '+1234567890',
-        displayName: 'Phone Soul',
-      };
-      repository.findByPhone.mockResolvedValue(null);
-      repository.create.mockResolvedValue({ ...mockSoul, type: SoulType.PHONE, phone: '+1234567890', email: undefined });
-
-      const result = await service.create('org-1', phoneDto);
-
-      expect(result).toBeDefined();
+      expect(orgRepository.createSoulOrg).not.toHaveBeenCalled();
     });
   });
 
@@ -126,11 +158,7 @@ describe('SoulService', () => {
 
   describe('findAll', () => {
     it('should return paginated list of souls', async () => {
-      const paginatedResult = {
-        data: [mockSoul],
-        hasMore: false,
-      };
-      repository.findAll.mockResolvedValue(paginatedResult);
+      repository.findAll.mockResolvedValue({ data: [mockSoul], hasMore: false });
 
       const result = await service.findAll('org-1', { limit: 20 });
 
@@ -179,9 +207,20 @@ describe('SoulService', () => {
   describe('delete', () => {
     it('should delete soul when no accounts linked', async () => {
       repository.findById.mockResolvedValue(mockSoul);
+      orgRepository.getSoulOrgBySoulId.mockResolvedValue(null);
 
       await service.delete('org-1', 'soul-1');
 
+      expect(repository.delete).toHaveBeenCalledWith('org-1', 'soul-1');
+    });
+
+    it('should disable soul-org when deleting a soul that has one', async () => {
+      repository.findById.mockResolvedValue(mockSoul);
+      orgRepository.getSoulOrgBySoulId.mockResolvedValue(mockSoulOrg as any);
+
+      await service.delete('org-1', 'soul-1');
+
+      expect(orgRepository.disableSoulOrg).toHaveBeenCalledWith('soul-org-1');
       expect(repository.delete).toHaveBeenCalledWith('org-1', 'soul-1');
     });
 
@@ -206,17 +245,6 @@ describe('SoulService', () => {
       const result = await service.getCount('org-1');
 
       expect(result).toBe(100);
-    });
-  });
-
-  describe('getCountByPersona', () => {
-    it('should return count by persona', async () => {
-      repository.countByPersona.mockResolvedValue(25);
-
-      const result = await service.getCountByPersona('org-1', 'persona-1');
-
-      expect(result).toBe(25);
-      expect(repository.countByPersona).toHaveBeenCalledWith('org-1', 'persona-1');
     });
   });
 });

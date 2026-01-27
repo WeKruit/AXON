@@ -38,6 +38,7 @@ import { FalService } from '@gitroom/nestjs-libraries/openai/fal.service';
 import { RefreshIntegrationService } from '@gitroom/nestjs-libraries/integrations/refresh.integration.service';
 import { MatrixRepository } from '@gitroom/nestjs-libraries/database/prisma/matrix/matrix.repository';
 import { MatrixService } from '@gitroom/nestjs-libraries/database/prisma/matrix/matrix.service';
+import { CredentialResolverService } from '@gitroom/nestjs-libraries/integrations/credential-resolver.service';
 
 @Global()
 @Module({
@@ -85,6 +86,7 @@ import { MatrixService } from '@gitroom/nestjs-libraries/database/prisma/matrix/
     VideoManager,
     MatrixRepository,
     MatrixService,
+    CredentialResolverService,
   ],
   get exports() {
     return this.providers;

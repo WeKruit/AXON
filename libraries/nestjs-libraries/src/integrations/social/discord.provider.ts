@@ -59,11 +59,12 @@ export class DiscordProvider extends SocialAbstract implements SocialProvider {
       username: '',
     };
   }
-  async generateAuthUrl() {
+  async generateAuthUrl(clientInformation?: { client_id: string; client_secret: string; instanceUrl: string }) {
+    const clientId = clientInformation?.client_id || process.env.DISCORD_CLIENT_ID;
     const state = makeId(6);
     return {
       url: `https://discord.com/oauth2/authorize?client_id=${
-        process.env.DISCORD_CLIENT_ID
+        clientId
       }&permissions=377957124096&response_type=code&redirect_uri=${encodeURIComponent(
         `${process.env.FRONTEND_URL}/integrations/social/discord`
       )}&integration_type=0&scope=bot+identify+guilds&state=${state}`,
@@ -76,7 +77,9 @@ export class DiscordProvider extends SocialAbstract implements SocialProvider {
     code: string;
     codeVerifier: string;
     refresh?: string;
-  }) {
+  }, clientInformation?: { client_id: string; client_secret: string; instanceUrl: string }) {
+    const clientId = clientInformation?.client_id || process.env.DISCORD_CLIENT_ID;
+    const clientSecret = clientInformation?.client_secret || process.env.DISCORD_CLIENT_SECRET;
     const { access_token, expires_in, refresh_token, scope, guild } = await (
       await this.fetch('https://discord.com/api/oauth2/token', {
         method: 'POST',
@@ -88,9 +91,9 @@ export class DiscordProvider extends SocialAbstract implements SocialProvider {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
           Authorization: `Basic ${Buffer.from(
-            process.env.DISCORD_CLIENT_ID +
+            clientId +
               ':' +
-              process.env.DISCORD_CLIENT_SECRET
+              clientSecret
           ).toString('base64')}`,
         },
       })

@@ -6,6 +6,9 @@ import { useSoulDashboard, useSoulMutations, useAccountMutations } from '../hook
 import { StatusBadge } from '../ui/status-badge';
 import { PlatformIcon, PlatformBadge } from '../ui/platform-icon';
 import { PurposeBadge } from '../ui/purpose-badge';
+import { SoulCredentialsManager } from '../ui/soul-credentials-manager';
+import { SoulAddChannelModal } from '../ui/soul-add-channel-modal';
+import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { deleteDialog } from '@gitroom/react/helpers/delete.dialog';
 import type { Account, CreateAccountDto, SoulStatus } from '../types';
@@ -27,13 +30,41 @@ export const SoulDashboardComponent: FC<SoulDashboardProps> = ({ soulId }) => {
     accounts,
     isLoading,
     mutate,
-    mutateSoul,
-    mutateAccounts,
   } = useSoulDashboard(soulId);
   const { updateSoul, deleteSoul } = useSoulMutations();
   const { createAccount, deleteAccount } = useAccountMutations();
   const toaster = useToaster();
+  const fetchApi = useFetch();
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
+  const [addChannelOrgId, setAddChannelOrgId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'accounts' | 'credentials'>('accounts');
+
+  // Connect Channel: ensure soul-org exists, then open soul-aware Add Channel modal
+  const handleConnectChannel = useCallback(async () => {
+    if (!soul) return;
+    try {
+      let orgId = soul.soulOrgId;
+
+      if (!orgId) {
+        const res = await fetchApi(`/axon/souls/${soul.id}/ensure-org`, { method: 'POST' });
+        if (!res.ok) {
+          throw new Error('Failed to ensure soul org');
+        }
+        const updated = await res.json();
+        orgId = updated.soulOrgId;
+        mutate();
+      }
+
+      if (!orgId) {
+        toaster.show('Failed to resolve soul organization.', 'warning');
+        return;
+      }
+
+      setAddChannelOrgId(orgId);
+    } catch {
+      toaster.show('Failed to connect channel. Please try again.', 'warning');
+    }
+  }, [soul, fetchApi, toaster, mutate]);
 
   const handleStatusChange = useCallback(
     async (status: SoulStatus) => {
@@ -41,31 +72,27 @@ export const SoulDashboardComponent: FC<SoulDashboardProps> = ({ soulId }) => {
       try {
         await updateSoul(soul.id, { status });
         // Force revalidation bypassing deduplication
-        await mutateSoul(undefined, { revalidate: true });
+        await mutate(undefined, { revalidate: true });
         toaster.show(`Soul status updated to ${status}`, 'success');
       } catch (error) {
         toaster.show('Failed to update status', 'warning');
       }
     },
-    [soul, updateSoul, mutateSoul, toaster]
+    [soul, updateSoul, mutate, toaster]
   );
 
   const handleAddAccount = useCallback(
     async (data: CreateAccountDto) => {
       try {
-        const newAccount = await createAccount({ ...data, soulId });
-        // Force revalidation bypassing deduplication
-        await mutateAccounts(
-          (currentData) => currentData ? [newAccount, ...currentData] : [newAccount],
-          { revalidate: true }
-        );
+        await createAccount({ ...data, soulId });
+        await mutate();
         setIsAddAccountOpen(false);
         toaster.show('Account added successfully', 'success');
       } catch (error) {
         toaster.show('Failed to add account', 'warning');
       }
     },
-    [createAccount, soulId, mutateAccounts, toaster]
+    [createAccount, soulId, mutate, toaster]
   );
 
   const handleDeleteAccount = useCallback(
@@ -78,17 +105,13 @@ export const SoulDashboardComponent: FC<SoulDashboardProps> = ({ soulId }) => {
 
       try {
         await deleteAccount(account.id);
-        // Force revalidation bypassing deduplication
-        await mutateAccounts(
-          (currentData) => currentData?.filter((a) => a.id !== account.id) ?? [],
-          { revalidate: true }
-        );
+        await mutate();
         toaster.show('Account removed successfully', 'success');
       } catch (error) {
         toaster.show('Failed to remove account', 'warning');
       }
     },
-    [deleteAccount, mutateAccounts, toaster]
+    [deleteAccount, mutate, toaster]
   );
 
   if (isLoading || !soul) {
@@ -149,54 +172,68 @@ export const SoulDashboardComponent: FC<SoulDashboardProps> = ({ soulId }) => {
             </div>
           )}
 
-          {/* Accounts */}
-          <div className="bg-newBgLineColor rounded-lg p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-medium">Accounts</h2>
-              <button
-                onClick={() => setIsAddAccountOpen(true)}
+          {/* Tabs */}
+          <div className="border-b border-newTableBorder">
+            <div className="flex gap-6">
+              {(['accounts', 'credentials'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`pb-2 text-sm font-medium capitalize transition-colors ${
+                    activeTab === tab
+                      ? 'text-btnPrimary border-b-2 border-btnPrimary'
+                      : 'text-textItemBlur hover:text-newTextColor'
+                  }`}
+                >
+                  {tab === 'accounts' ? 'Accounts & Channels' : 'API Credentials'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Tab content */}
+          {activeTab === 'accounts' && (
+            <div className="bg-newBgLineColor rounded-lg p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-medium">Accounts & Channels</h2>
+                <button
+                onClick={handleConnectChannel}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-btnPrimary text-white rounded-lg text-sm hover:bg-btnPrimary/90 transition-colors"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="12" y1="5" x2="12" y2="19" />
                   <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
-                Add Account
+                Add Channel
               </button>
-            </div>
+              </div>
 
-            {!accounts || accounts.length === 0 ? (
-              <div className="text-center py-8 text-textItemBlur">
-                <p className="mb-2">No accounts linked to this soul yet</p>
-                <button
-                  onClick={() => setIsAddAccountOpen(true)}
-                  className="text-btnPrimary hover:underline"
-                >
-                  Add your first account
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {accounts.map((account) => (
-                  <AccountRow
-                    key={account.id}
-                    account={account}
-                    onDelete={() => handleDeleteAccount(account)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+              {!accounts || accounts.length === 0 ? (
+                <div className="text-center py-8 text-textItemBlur">
+                  <p className="mb-2">No channels connected yet</p>
+                  <button onClick={handleConnectChannel} className="text-btnPrimary hover:underline">
+                    Add your first channel
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {accounts.map((account) => (
+                    <AccountRow
+                      key={account.id}
+                      account={account}
+                      onDelete={() => handleDeleteAccount(account)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'credentials' && (
+            <div className="bg-newBgLineColor rounded-lg p-4">
+              <SoulCredentialsManager soulId={soulId} />
+            </div>
+          )}
         </div>
 
         {/* Sidebar */}
@@ -243,15 +280,7 @@ export const SoulDashboardComponent: FC<SoulDashboardProps> = ({ soulId }) => {
                 href={`/launches?soulId=${soulId}`}
                 className="flex items-center gap-2 w-full p-2 text-left text-sm bg-newBgColorInner rounded-lg hover:bg-newBgColorInner/80 transition-colors"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                   <line x1="16" y1="2" x2="16" y2="6" />
                   <line x1="8" y1="2" x2="8" y2="6" />
@@ -263,15 +292,7 @@ export const SoulDashboardComponent: FC<SoulDashboardProps> = ({ soulId }) => {
                 href={`/analytics?soulId=${soulId}`}
                 className="flex items-center gap-2 w-full p-2 text-left text-sm bg-newBgColorInner rounded-lg hover:bg-newBgColorInner/80 transition-colors"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="18" y1="20" x2="18" y2="10" />
                   <line x1="12" y1="20" x2="12" y2="4" />
                   <line x1="6" y1="20" x2="6" y2="14" />
@@ -288,6 +309,14 @@ export const SoulDashboardComponent: FC<SoulDashboardProps> = ({ soulId }) => {
           soulId={soulId}
           onClose={() => setIsAddAccountOpen(false)}
           onSubmit={handleAddAccount}
+        />
+      )}
+
+      {addChannelOrgId && (
+        <SoulAddChannelModal
+          soulId={soulId}
+          soulOrgId={addChannelOrgId}
+          onClose={() => setAddChannelOrgId(null)}
         />
       )}
     </div>
