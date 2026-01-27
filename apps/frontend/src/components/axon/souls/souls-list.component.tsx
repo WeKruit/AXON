@@ -2,7 +2,8 @@
 
 import { FC, useCallback, useState, memo } from 'react';
 import Link from 'next/link';
-import { useSouls, useSoulMutations } from '../hooks';
+import { useSoulMutations } from '../hooks/use-axon-api';
+import { useAxonData, useAxonScrollPreservation } from '../context/axon-data-provider';
 import { StatusBadge } from '../ui/status-badge';
 import { PlatformIcon } from '../ui/platform-icon';
 import { ErrorState } from '../ui/error-boundary';
@@ -13,21 +14,34 @@ import { useSoulContextOptional } from '../context/soul-context';
 import type { Soul, CreateSoulDto } from '../types';
 import { CreateSoulModal } from './create-soul-modal';
 
+/**
+ * SoulsListComponent (WEC-190, WEC-193)
+ *
+ * Updated to use AxonDataProvider for:
+ * 1. Pre-fetched data from layout level (no loading flash on tab switch)
+ * 2. Preserved scroll position when returning to this tab
+ */
 export const SoulsListComponent: FC = () => {
-  const { data: souls, isLoading, error, mutate } = useSouls();
+  // Get data from AxonDataProvider context
+  const {
+    souls: data,
+    isLoadingSouls: isLoading,
+    soulsError: error,
+    mutateSouls: mutate,
+  } = useAxonData();
+
   const { createSoul, deleteSoul } = useSoulMutations();
   const toaster = useToaster();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
+  // Scroll preservation hook
+  const { containerRef, handleScroll } = useAxonScrollPreservation('souls');
+
   const handleCreateSoul = useCallback(
     async (data: CreateSoulDto) => {
       try {
-        const newSoul = await createSoul(data);
-        // Force revalidation bypassing deduplication
-        await mutate(
-          (currentData) => currentData ? [newSoul, ...currentData] : [newSoul],
-          { revalidate: true }
-        );
+        await createSoul(data);
+        await mutate();
         setIsCreateModalOpen(false);
         toaster.show('Soul created successfully', 'success');
       } catch (err) {
@@ -48,11 +62,7 @@ export const SoulsListComponent: FC = () => {
 
       try {
         await deleteSoul(soul.id);
-        // Force revalidation bypassing deduplication
-        await mutate(
-          (currentData) => currentData?.filter((s) => s.id !== soul.id) ?? [],
-          { revalidate: true }
-        );
+        await mutate();
         toaster.show('Soul deleted successfully', 'success');
       } catch (err) {
         console.error('Failed to delete soul:', err);
@@ -79,7 +89,11 @@ export const SoulsListComponent: FC = () => {
   }
 
   return (
-    <div className="flex-1 bg-newBgColorInner p-6">
+    <div
+      ref={containerRef}
+      onScroll={handleScroll}
+      className="flex-1 bg-newBgColorInner p-6 overflow-auto"
+    >
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold">Souls</h1>
@@ -97,7 +111,7 @@ export const SoulsListComponent: FC = () => {
         </button>
       </div>
 
-      {!souls || souls.length === 0 ? (
+      {!data || data.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="w-16 h-16 rounded-full bg-newBgLineColor flex items-center justify-center mb-4">
             <SoulIcon size={32} className="text-textItemBlur" />
@@ -121,7 +135,7 @@ export const SoulsListComponent: FC = () => {
           role="list"
           aria-label="Souls list"
         >
-          {souls.map((soul) => (
+          {data.map((soul) => (
             <SoulCard key={soul.id} soul={soul} onDelete={() => handleDeleteSoul(soul)} />
           ))}
         </div>

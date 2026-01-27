@@ -56,7 +56,7 @@ export const SoulDashboardComponent: FC<SoulDashboardProps> = ({ soulId }) => {
         const newAccount = await createAccount({ ...data, soulId });
         // Force revalidation bypassing deduplication
         await mutateAccounts(
-          (currentData) => currentData ? [newAccount, ...currentData] : [newAccount],
+          (currentData: Account[] | undefined) => currentData ? [newAccount, ...currentData] : [newAccount],
           { revalidate: true }
         );
         setIsAddAccountOpen(false);
@@ -80,7 +80,7 @@ export const SoulDashboardComponent: FC<SoulDashboardProps> = ({ soulId }) => {
         await deleteAccount(account.id);
         // Force revalidation bypassing deduplication
         await mutateAccounts(
-          (currentData) => currentData?.filter((a) => a.id !== account.id) ?? [],
+          (currentData: Account[] | undefined) => currentData?.filter((a: Account) => a.id !== account.id) ?? [],
           { revalidate: true }
         );
         toaster.show('Account removed successfully', 'success');
@@ -187,7 +187,7 @@ export const SoulDashboardComponent: FC<SoulDashboardProps> = ({ soulId }) => {
               </div>
             ) : (
               <div className="space-y-2">
-                {accounts.map((account) => (
+                {accounts.map((account: Account) => (
                   <AccountRow
                     key={account.id}
                     account={account}
