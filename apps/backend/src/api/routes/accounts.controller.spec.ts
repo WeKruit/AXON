@@ -48,6 +48,8 @@ describe('AccountsController', () => {
       assignProxy: jest.fn(),
       delete: jest.fn(),
       getAllCounts: jest.fn(),
+      linkToIntegration: jest.fn(),
+      unlinkFromIntegration: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -463,6 +465,70 @@ describe('AccountsController', () => {
       await expect(
         controller.delete(mockOrganization as Organization, 'nonexistent')
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('Phase 2: linkIntegration (PATCH /:id/integration)', () => {
+    it('should link integration to account', async () => {
+      const linkedAccount = { ...mockAccountResponse, integrationId: 'int-1' };
+      accountService.linkToIntegration.mockResolvedValue(linkedAccount);
+
+      const result = await controller.linkIntegration(
+        mockOrganization as Organization,
+        'acc-1',
+        { integrationId: 'int-1' }
+      );
+
+      expect(result.integrationId).toBe('int-1');
+      expect(accountService.linkToIntegration).toHaveBeenCalledWith('org-123', 'acc-1', 'int-1');
+    });
+
+    it('should unlink integration when integrationId is null', async () => {
+      accountService.unlinkFromIntegration.mockResolvedValue(mockAccountResponse);
+
+      const result = await controller.linkIntegration(
+        mockOrganization as Organization,
+        'acc-1',
+        { integrationId: null }
+      );
+
+      expect(accountService.unlinkFromIntegration).toHaveBeenCalledWith('org-123', 'acc-1');
+    });
+
+    it('should return 404 when account not found', async () => {
+      accountService.linkToIntegration.mockRejectedValue(new NotFoundException('Account not found'));
+
+      await expect(
+        controller.linkIntegration(mockOrganization as Organization, 'nonexistent', { integrationId: 'int-1' })
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should return 404 when integration not found', async () => {
+      accountService.linkToIntegration.mockRejectedValue(new NotFoundException('Integration not found'));
+
+      await expect(
+        controller.linkIntegration(mockOrganization as Organization, 'acc-1', { integrationId: 'nonexistent' })
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should return 400 when platform mismatch', async () => {
+      accountService.linkToIntegration.mockRejectedValue(
+        new BadRequestException('Account platform does not match integration platform')
+      );
+
+      await expect(
+        controller.linkIntegration(mockOrganization as Organization, 'acc-1', { integrationId: 'int-wrong-platform' })
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should return 409 when integration already linked to another account', async () => {
+      accountService.linkToIntegration.mockRejectedValue(
+        new ConflictException('Integration already linked to another account')
+      );
+
+      await expect(
+        controller.linkIntegration(mockOrganization as Organization, 'acc-1', { integrationId: 'int-taken' })
+      ).rejects.toThrow(ConflictException);
     });
   });
 

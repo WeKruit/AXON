@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MatrixService } from './matrix.service';
 import { MatrixRepository } from './matrix.repository';
 import { SoulRepository } from '@gitroom/nestjs-libraries/database/firestore/collections/souls/soul.repository';
+import { AccountService } from '@gitroom/nestjs-libraries/database/firestore/collections/accounts/account.service';
 import { NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { BulkOperationType } from '@gitroom/nestjs-libraries/dtos/axon';
 
@@ -9,6 +10,7 @@ describe('MatrixService', () => {
   let service: MatrixService;
   let matrixRepository: jest.Mocked<MatrixRepository>;
   let soulRepository: jest.Mocked<SoulRepository>;
+  let accountService: jest.Mocked<AccountService>;
 
   const mockOrganizationId = 'org-123';
   const mockUserId = 'user-123';
@@ -72,17 +74,35 @@ describe('MatrixService', () => {
       findById: jest.fn(),
     };
 
+    const mockAccountService = {
+      autoLinkByHandle: jest.fn(),
+      linkToIntegration: jest.fn(),
+      unlinkFromIntegration: jest.fn(),
+      create: jest.fn(),
+      findById: jest.fn(),
+      findAll: jest.fn(),
+      findBySoulId: jest.fn(),
+      update: jest.fn(),
+      updateStatus: jest.fn(),
+      assignProxy: jest.fn(),
+      delete: jest.fn(),
+      bulkImport: jest.fn(),
+      getAllCounts: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MatrixService,
         { provide: MatrixRepository, useValue: mockMatrixRepository },
         { provide: SoulRepository, useValue: mockSoulRepository },
+        { provide: AccountService, useValue: mockAccountService },
       ],
     }).compile();
 
     service = module.get<MatrixService>(MatrixService);
     matrixRepository = module.get(MatrixRepository);
     soulRepository = module.get(SoulRepository);
+    accountService = module.get(AccountService);
   });
 
   describe('getMatrix', () => {
@@ -622,6 +642,136 @@ describe('MatrixService', () => {
 
       expect(result.failed).toBe(1);
       expect(result.errors[0].error).toBe('Integration not found');
+    });
+  });
+
+  describe('Auto-Link Account-Integration (Phase 2)', () => {
+    describe('createMapping with auto-link', () => {
+      it('should auto-link account and pass accountId in created mapping', async () => {
+        soulRepository.findById.mockResolvedValue(mockSoul);
+        matrixRepository.integrationExists.mockResolvedValue(true);
+        matrixRepository.findExisting.mockResolvedValue(null);
+        matrixRepository.getIntegration.mockResolvedValue(mockIntegration);
+        accountService.autoLinkByHandle.mockResolvedValue('acc-linked-1');
+        const mappingWithAccount = { ...mockMapping, accountId: 'acc-linked-1' };
+        matrixRepository.create.mockResolvedValue(mappingWithAccount);
+        matrixRepository.findById.mockResolvedValue(mappingWithAccount);
+
+        const result = await service.createMapping(
+          mockOrganizationId,
+          { soulId: 'soul-1', integrationId: 'int-1' },
+          mockUserId
+        );
+
+        expect(accountService.autoLinkByHandle).toHaveBeenCalledWith(
+          mockOrganizationId,
+          'soul-1',
+          'int-1'
+        );
+        expect(result).toEqual(expect.objectContaining({
+          soulId: 'soul-1',
+          integrationId: 'int-1',
+        }));
+      });
+
+      it('should succeed even when auto-link throws an error', async () => {
+        soulRepository.findById.mockResolvedValue(mockSoul);
+        matrixRepository.integrationExists.mockResolvedValue(true);
+        matrixRepository.findExisting.mockResolvedValue(null);
+        accountService.autoLinkByHandle.mockRejectedValue(new Error('Auto-link failed'));
+        matrixRepository.create.mockResolvedValue(mockMapping);
+        matrixRepository.findById.mockResolvedValue(mockMapping);
+
+        const result = await service.createMapping(
+          mockOrganizationId,
+          { soulId: 'soul-1', integrationId: 'int-1' },
+          mockUserId
+        );
+
+        // Mapping should still be created even if auto-link fails
+        expect(result).toEqual(expect.objectContaining({
+          id: 'map-1',
+          soulId: 'soul-1',
+        }));
+      });
+    });
+
+    describe('toggleMapping with auto-link', () => {
+      it('should auto-link account when creating via toggle', async () => {
+        soulRepository.findById.mockResolvedValue(mockSoul);
+        matrixRepository.integrationExists.mockResolvedValue(true);
+        matrixRepository.findExisting.mockResolvedValue(null);
+        accountService.autoLinkByHandle.mockResolvedValue('acc-toggled-1');
+        matrixRepository.create.mockResolvedValue({ ...mockMapping, accountId: 'acc-toggled-1' });
+        matrixRepository.findById.mockResolvedValue({ ...mockMapping, accountId: 'acc-toggled-1' });
+
+        const result = await service.toggleMapping(
+          mockOrganizationId,
+          { soulId: 'soul-1', integrationId: 'int-1' },
+          mockUserId
+        );
+
+        expect(result.action).toBe('created');
+        expect(accountService.autoLinkByHandle).toHaveBeenCalledWith(
+          mockOrganizationId,
+          'soul-1',
+          'int-1'
+        );
+      });
+    });
+
+    describe('bulkOperations with auto-link', () => {
+      it('should auto-link accounts for each mapping in bulk create', async () => {
+        soulRepository.findById.mockResolvedValue(mockSoul);
+        matrixRepository.integrationExists.mockResolvedValue(true);
+        accountService.autoLinkByHandle
+          .mockResolvedValueOnce('acc-bulk-1')
+          .mockResolvedValueOnce('acc-bulk-2');
+        matrixRepository.bulkCreate.mockResolvedValue({
+          succeeded: 2,
+          failed: 0,
+          createdIds: ['map-b1', 'map-b2'],
+          errors: [],
+        });
+
+        const result = await service.bulkOperations(
+          mockOrganizationId,
+          {
+            operation: BulkOperationType.CREATE,
+            mappings: [
+              { soulId: 'soul-1', integrationId: 'int-1' },
+              { soulId: 'soul-1', integrationId: 'int-2' },
+            ],
+          },
+          mockUserId
+        );
+
+        expect(result.succeeded).toBe(2);
+        expect(accountService.autoLinkByHandle).toHaveBeenCalledTimes(2);
+      });
+    });
+
+    describe('getMatrix with accountId', () => {
+      it('should include accountId in mapping response when account is linked', async () => {
+        const mappingWithAccount = { ...mockMapping, accountId: 'acc-linked-1' };
+        soulRepository.findAll.mockResolvedValue({
+          data: [mockSoul],
+          total: 1,
+          hasMore: false,
+        });
+        matrixRepository.getAllIntegrations.mockResolvedValue([mockIntegration]);
+        matrixRepository.getAllMappingsLean.mockResolvedValue([mappingWithAccount]);
+
+        const result = await service.getMatrix(mockOrganizationId, {});
+
+        const mapping = result.mappings.find(m => m.id === 'map-1');
+        expect(mapping).toEqual(expect.objectContaining({
+          id: 'map-1',
+          soulId: 'soul-1',
+          integrationId: 'int-1',
+          accountId: 'acc-linked-1',
+        }));
+      });
     });
   });
 });
