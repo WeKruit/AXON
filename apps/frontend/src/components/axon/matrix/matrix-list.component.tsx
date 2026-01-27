@@ -3,6 +3,7 @@
 import { FC, useCallback, useMemo, useState, useEffect } from 'react';
 import { MatrixGrid } from './matrix-grid.component';
 import { useMatrix, useMatrixMutations, useMatrixStats } from './use-matrix';
+import { useAccounts } from '../hooks';
 import { ErrorState } from '../ui/error-boundary';
 import { FilterIcon, GridIcon, RefreshIcon } from '../ui/icons';
 import { useToaster } from '@gitroom/react/toaster/toaster';
@@ -23,6 +24,7 @@ const PLATFORM_OPTIONS: { value: Platform | ''; label: string }[] = [
 
 export const MatrixListComponent: FC = () => {
   const { data, souls, integrations, isLoading, error, mutate } = useMatrix();
+  const { data: accounts } = useAccounts();
   const { toggleMapping, setPrimary, bulkOperation } = useMatrixMutations();
   const stats = useMatrixStats(data);
   const toaster = useToaster();
@@ -281,6 +283,7 @@ export const MatrixListComponent: FC = () => {
       <div className="bg-newBgLineColor rounded-lg p-4">
         <MatrixGrid
           data={data}
+          accounts={accounts}
           isLoading={isLoading}
           filters={filters}
           onToggleMapping={handleToggleMapping}
