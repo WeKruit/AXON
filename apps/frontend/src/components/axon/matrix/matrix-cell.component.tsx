@@ -133,13 +133,40 @@ export const MatrixCell: FC<MatrixCellProps> = memo(({
         </>
       )}
 
+      {/* Account link indicator - small badge in corner */}
+      {hasLinkedAccounts && (
+        <div
+          className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-green-500 flex items-center justify-center"
+          title={`${linkedCount} account(s) linked to this integration`}
+        >
+          <LinkIcon size={10} className="text-white" />
+        </div>
+      )}
+
       {/* Tooltip on hover */}
       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-newBgColor rounded text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 border border-newBgLineColor shadow-lg">
-        {isConnected ? (isPrimary ? 'Primary' : 'Connected') : 'Not connected'}
-        <br />
-        <span className="text-textItemBlur">
+        <div className="font-medium">
+          {isConnected ? (isPrimary ? 'Primary' : 'Connected') : 'Not connected'}
+        </div>
+        {hasLinkedAccounts && (
+          <div className="text-green-500 flex items-center gap-1 mt-0.5">
+            <LinkIcon size={10} />
+            {linkedCount} account{linkedCount !== 1 ? 's' : ''} linked
+          </div>
+        )}
+        {linkedAccounts && linkedAccounts.length > 0 && hasLinkedAccounts && (
+          <div className="text-textItemBlur mt-1 max-w-[150px]">
+            {linkedAccounts
+              .filter((a) => a.isLinked)
+              .slice(0, 3)
+              .map((a) => a.username)
+              .join(', ')}
+            {linkedCount > 3 && ` +${linkedCount - 3} more`}
+          </div>
+        )}
+        <div className="text-textItemBlur mt-1">
           {isConnected ? 'Double-click to toggle primary' : 'Click to connect'}
-        </span>
+        </div>
       </div>
     </button>
   );
