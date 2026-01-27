@@ -13,6 +13,7 @@ export {
   useProxyMutations,
   useAxonAnalytics,
   useSoulDashboard,
+<<<<<<< HEAD
   usePreloadFunctions,
   useCompatibleIntegrations,
   useAccountIntegrationMutations,
@@ -20,4 +21,8 @@ export {
 
 export type { SoulDashboardData, AccountLinkableIntegration } from './use-axon-api';
 
+=======
+} from './use-axon-api';
+
+>>>>>>> f8f0efc6 (feat: AXON frontend performance Phase 2 - state preservation & virtualization)
 export { useDebounce, useDebouncedCallback } from './use-debounce';

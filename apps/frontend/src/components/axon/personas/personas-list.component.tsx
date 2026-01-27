@@ -2,29 +2,43 @@
 
 import { FC, useCallback, useState } from 'react';
 import Link from 'next/link';
-import { usePersonas, usePersonaMutations } from '../hooks';
+import { usePersonaMutations } from '../hooks/use-axon-api';
+import { useAxonData, useAxonScrollPreservation } from '../context/axon-data-provider';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { deleteDialog } from '@gitroom/react/helpers/delete.dialog';
 import type { Persona, CreatePersonaDto, GeneratePersonaDto } from '../types';
 import { CreatePersonaModal } from './create-persona-modal';
 import { GeneratePersonaModal } from './generate-persona-modal';
 
+/**
+ * PersonasListComponent (WEC-190, WEC-193)
+ *
+ * Updated to use AxonDataProvider for:
+ * 1. Pre-fetched data from layout level (no loading flash on tab switch)
+ * 2. Preserved scroll position when returning to this tab
+ */
 export const PersonasListComponent: FC = () => {
-  const { data: personas, isLoading, mutate } = usePersonas();
+  // Get data from AxonDataProvider context
+  const {
+    personas: data,
+    isLoadingPersonas: isLoading,
+    personasError: error,
+    mutatePersonas: mutate,
+  } = useAxonData();
+
   const { createPersona, deletePersona, generatePersona } = usePersonaMutations();
   const toaster = useToaster();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
 
+  // Scroll preservation hook
+  const { containerRef, handleScroll } = useAxonScrollPreservation('personas');
+
   const handleCreatePersona = useCallback(
     async (data: CreatePersonaDto) => {
       try {
-        const newPersona = await createPersona(data);
-        // Force revalidation bypassing deduplication
-        await mutate(
-          (currentData) => currentData ? [newPersona, ...currentData] : [newPersona],
-          { revalidate: true }
-        );
+        await createPersona(data);
+        await mutate();
         setIsCreateModalOpen(false);
         toaster.show('Persona created successfully', 'success');
       } catch (error) {
@@ -37,12 +51,8 @@ export const PersonasListComponent: FC = () => {
   const handleGeneratePersona = useCallback(
     async (data: GeneratePersonaDto) => {
       try {
-        const newPersona = await generatePersona(data);
-        // Force revalidation bypassing deduplication
-        await mutate(
-          (currentData) => currentData ? [newPersona, ...currentData] : [newPersona],
-          { revalidate: true }
-        );
+        await generatePersona(data);
+        await mutate();
         setIsGenerateModalOpen(false);
         toaster.show('Persona generated successfully', 'success');
       } catch (error) {
@@ -62,11 +72,7 @@ export const PersonasListComponent: FC = () => {
 
       try {
         await deletePersona(persona.id);
-        // Force revalidation bypassing deduplication
-        await mutate(
-          (currentData) => currentData?.filter((p) => p.id !== persona.id) ?? [],
-          { revalidate: true }
-        );
+        await mutate();
         toaster.show('Persona deleted successfully', 'success');
       } catch (error) {
         toaster.show('Failed to delete persona', 'warning');
@@ -95,7 +101,11 @@ export const PersonasListComponent: FC = () => {
   }
 
   return (
-    <div className="flex-1 bg-newBgColorInner p-6">
+    <div
+      ref={containerRef}
+      onScroll={handleScroll}
+      className="flex-1 bg-newBgColorInner p-6 overflow-auto"
+    >
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold">Personas</h1>
@@ -148,7 +158,7 @@ export const PersonasListComponent: FC = () => {
         </div>
       </div>
 
-      {!personas || personas.length === 0 ? (
+      {!data || data.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="w-16 h-16 rounded-full bg-newBgLineColor flex items-center justify-center mb-4">
             <svg
@@ -189,7 +199,7 @@ export const PersonasListComponent: FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {personas.map((persona) => (
+          {data.map((persona) => (
             <PersonaCard
               key={persona.id}
               persona={persona}

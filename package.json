@@ -88,6 +88,7 @@
     "@swc/helpers": "0.5.13",
     "@sweetalert2/theme-dark": "^5.0.16",
     "@tailwindcss/postcss": "^4.1.7",
+    "@tanstack/react-virtual": "^3.13.18",
     "@temporalio/activity": "^1.14.0",
     "@temporalio/client": "^1.14.0",
     "@temporalio/common": "^1.14.0",
