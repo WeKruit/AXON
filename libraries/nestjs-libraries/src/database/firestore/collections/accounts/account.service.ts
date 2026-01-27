@@ -14,13 +14,31 @@ import {
   Platform,
 } from '@gitroom/nestjs-libraries/dtos/axon';
 import { AuthService } from '@gitroom/helpers/auth/auth.service';
+import { MatrixRepository } from '@gitroom/nestjs-libraries/database/prisma/matrix/matrix.repository';
+
+// Map from Postiz providerIdentifier to AXON Platform enum
+const PROVIDER_TO_PLATFORM: Record<string, Platform> = {
+  twitter: Platform.TWITTER,
+  x: Platform.TWITTER,
+  instagram: Platform.INSTAGRAM,
+  facebook: Platform.FACEBOOK,
+  linkedin: Platform.LINKEDIN,
+  tiktok: Platform.TIKTOK,
+  youtube: Platform.YOUTUBE,
+  reddit: Platform.REDDIT,
+  pinterest: Platform.PINTEREST,
+  threads: Platform.THREADS,
+  bluesky: Platform.BLUESKY,
+  mastodon: Platform.MASTODON,
+};
 
 @Injectable()
 export class AccountService {
   constructor(
     private readonly accountRepository: AccountRepository,
     private readonly soulRepository: SoulRepository,
-    private readonly proxyRepository: ProxyRepository
+    private readonly proxyRepository: ProxyRepository,
+    private readonly matrixRepository: MatrixRepository
   ) {}
 
   async create(organizationId: string, dto: CreateAccountDto): Promise<AccountResponseDto> {
@@ -384,6 +402,7 @@ export class AccountService {
       avatarUrl: account.avatarUrl,
       status: account.status,
       proxyId: account.proxyId,
+      integrationId: account.integrationId,
       metrics: account.metrics,
       warmingConfig: account.warmingConfig,
       lastActivityAt: account.lastActivityAt,
@@ -391,5 +410,149 @@ export class AccountService {
       createdAt: account.createdAt instanceof Date ? account.createdAt : new Date((account.createdAt as any)._seconds * 1000),
       updatedAt: account.updatedAt instanceof Date ? account.updatedAt : new Date((account.updatedAt as any)._seconds * 1000),
     };
+  }
+
+  /**
+   * Link an account to a Postiz integration.
+   * Validates that the integration exists and matches the account's platform.
+   */
+  async linkToIntegration(
+    organizationId: string,
+    accountId: string,
+    integrationId: string
+  ): Promise<AccountResponseDto> {
+    const account = await this.accountRepository.findById(organizationId, accountId);
+    if (!account) {
+      throw new NotFoundException('Account not found');
+    }
+
+    // Validate the integration exists
+    const integration = await this.matrixRepository.getIntegration(organizationId, integrationId);
+    if (!integration) {
+      throw new NotFoundException('Integration not found');
+    }
+
+    // Validate platform match
+    const integrationPlatform = PROVIDER_TO_PLATFORM[integration.providerIdentifier.toLowerCase()];
+    if (!integrationPlatform) {
+      throw new BadRequestException(
+        `Unknown integration platform: ${integration.providerIdentifier}`
+      );
+    }
+
+    if (integrationPlatform !== account.platform) {
+      throw new BadRequestException(
+        `Platform mismatch: Account is ${account.platform} but integration is ${integration.providerIdentifier}`
+      );
+    }
+
+    // Check if another account is already linked to this integration
+    const existingLinked = await this.accountRepository.findByIntegrationId(organizationId, integrationId);
+    if (existingLinked && existingLinked.id !== accountId) {
+      throw new ConflictException(
+        `Integration is already linked to account '${existingLinked.handle}'`
+      );
+    }
+
+    // Link the account
+    await this.accountRepository.linkIntegration(organizationId, accountId, integrationId);
+
+    return this.findById(organizationId, accountId);
+  }
+
+  /**
+   * Unlink an account from its Postiz integration.
+   */
+  async unlinkFromIntegration(
+    organizationId: string,
+    accountId: string
+  ): Promise<AccountResponseDto> {
+    const account = await this.accountRepository.findById(organizationId, accountId);
+    if (!account) {
+      throw new NotFoundException('Account not found');
+    }
+
+    if (!account.integrationId) {
+      throw new BadRequestException('Account is not linked to any integration');
+    }
+
+    await this.accountRepository.unlinkIntegration(organizationId, accountId);
+
+    return this.findById(organizationId, accountId);
+  }
+
+  /**
+   * Auto-link an account to an integration by matching handle.
+   * Used when creating a soul-integration mapping to automatically find the corresponding account.
+   *
+   * @param organizationId Organization ID
+   * @param soulId Soul ID
+   * @param integrationId Integration ID
+   * @returns Account ID if found and linked, null otherwise
+   */
+  async autoLinkByHandle(
+    organizationId: string,
+    soulId: string,
+    integrationId: string
+  ): Promise<string | null> {
+    // Get integration details to determine platform
+    const integration = await this.matrixRepository.getIntegration(organizationId, integrationId);
+    if (!integration) {
+      return null;
+    }
+
+    const integrationPlatform = PROVIDER_TO_PLATFORM[integration.providerIdentifier.toLowerCase()];
+    if (!integrationPlatform) {
+      return null;
+    }
+
+    // Find accounts for this soul with matching platform
+    const accounts = await this.accountRepository.findBySoulIdAndPlatform(
+      organizationId,
+      soulId,
+      integrationPlatform
+    );
+
+    if (accounts.length === 0) {
+      return null;
+    }
+
+    // Check if integration is already linked
+    const existingLinked = await this.accountRepository.findByIntegrationId(organizationId, integrationId);
+    if (existingLinked) {
+      // Already linked, return existing account ID
+      return existingLinked.id;
+    }
+
+    // Try to match by handle (integration name is often the handle)
+    const integrationName = integration.name.toLowerCase().trim();
+
+    // First try exact match
+    let matchedAccount = accounts.find(
+      (acc) => acc.handle.toLowerCase().trim() === integrationName && !acc.integrationId
+    );
+
+    // If no exact match, use first unlinked account for this platform
+    if (!matchedAccount) {
+      matchedAccount = accounts.find((acc) => !acc.integrationId);
+    }
+
+    if (matchedAccount) {
+      await this.accountRepository.linkIntegration(organizationId, matchedAccount.id, integrationId);
+      return matchedAccount.id;
+    }
+
+    return null;
+  }
+
+  /**
+   * Find account by integration ID
+   */
+  async findByIntegrationId(organizationId: string, integrationId: string): Promise<AccountResponseDto | null> {
+    const account = await this.accountRepository.findByIntegrationId(organizationId, integrationId);
+    if (!account) {
+      return null;
+    }
+    return this.toResponseDto(account);
   }
 }
