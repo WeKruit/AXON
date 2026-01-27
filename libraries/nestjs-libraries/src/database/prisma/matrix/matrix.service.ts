@@ -3,9 +3,12 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { MatrixRepository, MappingWithIntegration } from './matrix.repository';
 import { SoulRepository } from '@gitroom/nestjs-libraries/database/firestore/collections/souls/soul.repository';
+import { AccountService } from '@gitroom/nestjs-libraries/database/firestore/collections/accounts/account.service';
 import {
   CreateMappingDto,
   UpdateMappingDto,
@@ -26,7 +29,9 @@ import {
 export class MatrixService {
   constructor(
     private readonly matrixRepository: MatrixRepository,
-    private readonly soulRepository: SoulRepository
+    private readonly soulRepository: SoulRepository,
+    @Inject(forwardRef(() => AccountService))
+    private readonly accountService: AccountService
   ) {}
 
   /**
@@ -84,6 +89,7 @@ export class MatrixService {
         priority: m.priority,
         notes: m.notes ?? undefined,
         createdBy: m.createdBy ?? undefined,
+        accountId: m.accountId ?? undefined,
         createdAt: m.createdAt,
         updatedAt: m.updatedAt,
       })),
@@ -197,10 +203,23 @@ export class MatrixService {
       }
     }
 
+    // Auto-link account: Try to find a matching account for this soul+integration
+    let accountId: string | undefined;
+    try {
+      accountId = (await this.accountService.autoLinkByHandle(
+        organizationId,
+        dto.soulId,
+        dto.integrationId
+      )) ?? undefined;
+    } catch {
+      // Silently fail auto-linking, don't block mapping creation
+    }
+
     const mapping = await this.matrixRepository.create(
       organizationId,
       dto,
-      userId
+      userId,
+      accountId
     );
 
     // Fetch the full mapping with integration details
@@ -245,6 +264,18 @@ export class MatrixService {
       await this.matrixRepository.delete(organizationId, existing.id);
       return { action: 'deleted' };
     } else {
+      // Auto-link account: Try to find a matching account for this soul+integration
+      let accountId: string | undefined;
+      try {
+        accountId = (await this.accountService.autoLinkByHandle(
+          organizationId,
+          dto.soulId,
+          dto.integrationId
+        )) ?? undefined;
+      } catch {
+        // Silently fail auto-linking, don't block mapping creation
+      }
+
       // Create the mapping
       const mapping = await this.matrixRepository.create(
         organizationId,
@@ -252,7 +283,8 @@ export class MatrixService {
           soulId: dto.soulId,
           integrationId: dto.integrationId,
         },
-        userId
+        userId,
+        accountId
       );
 
       const fullMapping = await this.matrixRepository.findById(
@@ -362,9 +394,26 @@ export class MatrixService {
     }
 
     if (dto.operation === BulkOperationType.CREATE) {
+      // Try to auto-link accounts for each mapping
+      const mappingsWithAccounts = await Promise.all(
+        validMappings.map(async (item) => {
+          let accountId: string | undefined;
+          try {
+            accountId = (await this.accountService.autoLinkByHandle(
+              organizationId,
+              item.soulId,
+              item.integrationId
+            )) ?? undefined;
+          } catch {
+            // Silently fail auto-linking
+          }
+          return { ...item, accountId };
+        })
+      );
+
       const result = await this.matrixRepository.bulkCreate(
         organizationId,
-        validMappings,
+        mappingsWithAccounts,
         userId
       );
 
@@ -453,6 +502,7 @@ export class MatrixService {
       priority: mapping.priority,
       notes: mapping.notes ?? undefined,
       createdBy: mapping.createdBy ?? undefined,
+      accountId: mapping.accountId ?? undefined,
       createdAt: mapping.createdAt,
       updatedAt: mapping.updatedAt,
       integration: mapping.integration
