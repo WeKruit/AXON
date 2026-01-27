@@ -41,6 +41,9 @@ model Organization {
   users             UserOrganization[]
   webhooks          Webhooks[]
   soulMappings      SoulIntegrationMapping[]
+  isSoulOrg         Boolean             @default(false)
+  soulId            String?
+  parentOrgId       String?
 }
 
 model Tags {

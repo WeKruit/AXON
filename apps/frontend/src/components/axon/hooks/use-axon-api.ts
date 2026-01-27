@@ -434,6 +434,56 @@ export function useCompatibleIntegrations(platform?: string, config?: SWRConfigu
 /**
  * Hook for account-integration linking mutations
  */
+export interface SoulCredential {
+  platform: string;
+  clientId: string;
+  clientSecretMasked: string;
+}
+
+export function useSoulCredentials(soulId: string | undefined, config?: SWRConfiguration) {
+  const fetch = useFetch();
+
+  const fetcher = useCallback(async () => {
+    if (!soulId) return [];
+    const response = await fetch(`/axon/souls/${soulId}/credentials`);
+    if (!response.ok) return [];
+    return response.json() as Promise<SoulCredential[]>;
+  }, [fetch, soulId]);
+
+  return useSWR<SoulCredential[]>(
+    soulId ? `/axon/souls/${soulId}/credentials` : null,
+    fetcher,
+    { ...defaultSwrConfig, ...config },
+  );
+}
+
+export function useSoulCredentialMutations() {
+  const fetch = useFetch();
+
+  const upsertCredential = useCallback(async (
+    soulId: string,
+    platform: string,
+    clientId: string,
+    clientSecret: string,
+  ) => {
+    const response = await fetch(`/axon/souls/${soulId}/credentials/${platform}`, {
+      method: 'PUT',
+      body: JSON.stringify({ clientId, clientSecret }),
+    });
+    if (!response.ok) throw new Error('Failed to save credentials');
+    return response.json();
+  }, [fetch]);
+
+  const deleteCredential = useCallback(async (soulId: string, platform: string) => {
+    const response = await fetch(`/axon/souls/${soulId}/credentials/${platform}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Failed to delete credentials');
+  }, [fetch]);
+
+  return { upsertCredential, deleteCredential };
+}
+
 export function useAccountIntegrationMutations() {
   const fetch = useFetch();
 

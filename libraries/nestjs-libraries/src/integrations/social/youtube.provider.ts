@@ -158,9 +158,13 @@ export class YoutubeProvider extends SocialAbstract implements SocialProvider {
     };
   }
 
-  async generateAuthUrl() {
+  async generateAuthUrl(clientInformation?: { client_id: string; client_secret: string; instanceUrl: string }) {
     const state = makeId(7);
-    const { client } = clientAndYoutube();
+    const client = new google.auth.OAuth2({
+      clientId: clientInformation?.client_id || process.env.YOUTUBE_CLIENT_ID,
+      clientSecret: clientInformation?.client_secret || process.env.YOUTUBE_CLIENT_SECRET,
+      redirectUri: `${process.env.FRONTEND_URL}/integrations/social/youtube`,
+    });
     return {
       url: client.generateAuthUrl({
         access_type: 'offline',
@@ -178,8 +182,17 @@ export class YoutubeProvider extends SocialAbstract implements SocialProvider {
     code: string;
     codeVerifier: string;
     refresh?: string;
-  }) {
-    const { client, oauth2 } = clientAndYoutube();
+  }, clientInformation?: { client_id: string; client_secret: string; instanceUrl: string }) {
+    const client = new google.auth.OAuth2({
+      clientId: clientInformation?.client_id || process.env.YOUTUBE_CLIENT_ID,
+      clientSecret: clientInformation?.client_secret || process.env.YOUTUBE_CLIENT_SECRET,
+      redirectUri: `${process.env.FRONTEND_URL}/integrations/social/youtube`,
+    });
+    const oauth2 = (newClient: OAuth2Client) =>
+      google.oauth2({
+        version: 'v2',
+        auth: newClient,
+      });
     const { tokens } = await client.getToken(params.code);
     client.setCredentials(tokens);
     const { scopes } = await client.getTokenInfo(tokens.access_token!);

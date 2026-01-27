@@ -318,12 +318,13 @@ export class InstagramProvider
     };
   }
 
-  async generateAuthUrl() {
+  async generateAuthUrl(clientInformation?: { client_id: string; client_secret: string; instanceUrl: string }) {
+    const clientId = clientInformation?.client_id || process.env.FACEBOOK_APP_ID;
     const state = makeId(6);
     return {
       url:
         'https://www.facebook.com/v20.0/dialog/oauth' +
-        `?client_id=${process.env.FACEBOOK_APP_ID}` +
+        `?client_id=${clientId}` +
         `&redirect_uri=${encodeURIComponent(
           `${process.env.FRONTEND_URL}/integrations/social/instagram`
         )}` +
@@ -338,17 +339,19 @@ export class InstagramProvider
     code: string;
     codeVerifier: string;
     refresh: string;
-  }) {
+  }, clientInformation?: { client_id: string; client_secret: string; instanceUrl: string }) {
+    const clientId = clientInformation?.client_id || process.env.FACEBOOK_APP_ID;
+    const clientSecret = clientInformation?.client_secret || process.env.FACEBOOK_APP_SECRET;
     const getAccessToken = await (
       await fetch(
         'https://graph.facebook.com/v20.0/oauth/access_token' +
-          `?client_id=${process.env.FACEBOOK_APP_ID}` +
+          `?client_id=${clientId}` +
           `&redirect_uri=${encodeURIComponent(
             `${process.env.FRONTEND_URL}/integrations/social/instagram${
               params.refresh ? `?refresh=${params.refresh}` : ''
             }`
           )}` +
-          `&client_secret=${process.env.FACEBOOK_APP_SECRET}` +
+          `&client_secret=${clientSecret}` +
           `&code=${params.code}`
       )
     ).json();
@@ -357,8 +360,8 @@ export class InstagramProvider
       await fetch(
         'https://graph.facebook.com/v20.0/oauth/access_token' +
           '?grant_type=fb_exchange_token' +
-          `&client_id=${process.env.FACEBOOK_APP_ID}` +
-          `&client_secret=${process.env.FACEBOOK_APP_SECRET}` +
+          `&client_id=${clientId}` +
+          `&client_secret=${clientSecret}` +
           `&fb_exchange_token=${getAccessToken.access_token}`
       )
     ).json();

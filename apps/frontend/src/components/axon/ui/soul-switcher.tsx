@@ -1,6 +1,7 @@
 'use client';
 
 import { FC, useState, useRef, useEffect } from 'react';
+import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useSouls } from '../hooks/use-axon-api';
 import { useSoulContext } from '../context/soul-context';
 import { ChevronDownIcon, SoulIcon, CheckIcon } from './icons';
@@ -11,9 +12,11 @@ interface SoulSwitcherProps {
 }
 
 export const SoulSwitcher: FC<SoulSwitcherProps> = ({ className = '' }) => {
+  const fetch = useFetch();
   const { data: souls, isLoading } = useSouls();
   const { selectedSoul, selectedSoulId, selectSoul, isAllSoulsView } = useSoulContext();
   const [isOpen, setIsOpen] = useState(false);
+  const [isSwitching, setIsSwitching] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -42,9 +45,34 @@ export const SoulSwitcher: FC<SoulSwitcherProps> = ({ className = '' }) => {
     }
   }, [selectedSoulId, souls, selectedSoul, selectSoul]);
 
-  const handleSelect = (soul: Soul | null) => {
-    selectSoul(soul);
+  const handleSelect = async (soul: Soul | null) => {
+    if (isSwitching) return;
+    setIsSwitching(true);
     setIsOpen(false);
+
+    try {
+      if (soul?.soulOrgId) {
+        // Switch to the soul's dedicated org
+        await fetch('/user/change-org', {
+          method: 'POST',
+          body: JSON.stringify({ id: soul.soulOrgId }),
+        });
+      } else if (!soul && selectedSoul?.soulOrgId) {
+        // Switching back to "All Souls" - reload to restore parent org
+        // The parent org cookie will be set by the backend
+        await fetch('/user/change-org', {
+          method: 'POST',
+          body: JSON.stringify({ id: selectedSoul.organizationId }),
+        });
+      }
+      selectSoul(soul);
+      // Reload to pick up the new org context
+      if (soul?.soulOrgId || (!soul && selectedSoul?.soulOrgId)) {
+        window.location.reload();
+      }
+    } finally {
+      setIsSwitching(false);
+    }
   };
 
   const displayName = isAllSoulsView

@@ -7,6 +7,8 @@ import { AccountService } from './collections/accounts/account.service';
 import { ProxyRepository } from './collections/proxies/proxy.repository';
 import { ProxyService } from './collections/proxies/proxy.service';
 import { IPRoyalClient } from '@gitroom/nestjs-libraries/proxy-providers';
+import { SoulCredentialsRepository } from './collections/soul-credentials/soul-credentials.repository';
+import { SoulCredentialsService } from './collections/soul-credentials/soul-credentials.service';
 
 @Global()
 @Module({
@@ -19,6 +21,8 @@ import { IPRoyalClient } from '@gitroom/nestjs-libraries/proxy-providers';
     ProxyRepository,
     ProxyService,
     IPRoyalClient,
+    SoulCredentialsRepository,
+    SoulCredentialsService,
   ],
   exports: [
     FirestoreService,
@@ -29,6 +33,8 @@ import { IPRoyalClient } from '@gitroom/nestjs-libraries/proxy-providers';
     ProxyRepository,
     ProxyService,
     IPRoyalClient,
+    SoulCredentialsRepository,
+    SoulCredentialsService,
   ],
 })
 export class FirestoreModule {}

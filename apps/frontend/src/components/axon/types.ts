@@ -11,6 +11,7 @@ export interface Soul {
   description?: string;
   status: SoulStatus;
   organizationId: string;
+  soulOrgId?: string;
   personaId?: string;
   persona?: Persona;
   accounts: Account[];

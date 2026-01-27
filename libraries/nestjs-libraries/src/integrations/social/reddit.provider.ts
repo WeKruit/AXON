@@ -71,11 +71,12 @@ export class RedditProvider extends SocialAbstract implements SocialProvider {
     };
   }
 
-  async generateAuthUrl() {
+  async generateAuthUrl(clientInformation?: { client_id: string; client_secret: string; instanceUrl: string }) {
+    const clientId = clientInformation?.client_id || process.env.REDDIT_CLIENT_ID;
     const state = makeId(6);
     const codeVerifier = makeId(30);
     const url = `https://www.reddit.com/api/v1/authorize?client_id=${
-      process.env.REDDIT_CLIENT_ID
+      clientId
     }&response_type=code&state=${state}&redirect_uri=${encodeURIComponent(
       `${process.env.FRONTEND_URL}/integrations/social/reddit`
     )}&duration=permanent&scope=${encodeURIComponent(this.scopes.join(' '))}`;
@@ -86,7 +87,9 @@ export class RedditProvider extends SocialAbstract implements SocialProvider {
     };
   }
 
-  async authenticate(params: { code: string; codeVerifier: string }) {
+  async authenticate(params: { code: string; codeVerifier: string }, clientInformation?: { client_id: string; client_secret: string; instanceUrl: string }) {
+    const clientId = clientInformation?.client_id || process.env.REDDIT_CLIENT_ID;
+    const clientSecret = clientInformation?.client_secret || process.env.REDDIT_CLIENT_SECRET;
     const {
       access_token: accessToken,
       refresh_token: refreshToken,
@@ -98,7 +101,7 @@ export class RedditProvider extends SocialAbstract implements SocialProvider {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
           Authorization: `Basic ${Buffer.from(
-            `${process.env.REDDIT_CLIENT_ID}:${process.env.REDDIT_CLIENT_SECRET}`
+            `${clientId}:${clientSecret}`
           ).toString('base64')}`,
         },
         body: new URLSearchParams({

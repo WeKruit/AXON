@@ -124,6 +124,7 @@ export class OrganizationRepository {
             userId,
           },
         },
+        isSoulOrg: false,
       },
       include: {
         users: {
@@ -143,6 +144,43 @@ export class OrganizationRepository {
             createdAt: true,
           },
         },
+      },
+    });
+  }
+
+  async createSoulOrg(name: string, soulId: string, parentOrgId: string, userId: string) {
+    return this._organization.model.organization.create({
+      data: {
+        name: `Soul: ${name}`,
+        isSoulOrg: true,
+        soulId,
+        parentOrgId,
+        users: {
+          create: {
+            role: Role.ADMIN,
+            userId,
+          },
+        },
+      },
+    });
+  }
+
+  async disableSoulOrg(soulOrgId: string) {
+    return this._userOrg.model.userOrganization.updateMany({
+      where: {
+        organizationId: soulOrgId,
+      },
+      data: {
+        disabled: true,
+      },
+    });
+  }
+
+  async getSoulOrgBySoulId(soulId: string) {
+    return this._organization.model.organization.findFirst({
+      where: {
+        soulId,
+        isSoulOrg: true,
       },
     });
   }

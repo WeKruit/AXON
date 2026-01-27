@@ -314,8 +314,9 @@ export const AddProviderComponent: FC<{
     name: string;
   }>;
   update?: () => void;
+  onPlatformClick?: (identifier: string) => Promise<boolean | void>;
 }> = (props) => {
-  const { update, social, article } = props;
+  const { update, social, article, onPlatformClick } = props;
   const { isGeneral } = useVariables();
   const toaster = useToaster();
   const router = useRouter();
@@ -335,6 +336,10 @@ export const AddProviderComponent: FC<{
         }>
       ) =>
       async () => {
+        if (onPlatformClick) {
+          const shouldContinue = await onPlatformClick(identifier);
+          if (shouldContinue === false) return;
+        }
         const openWeb3 = async () => {
           const { component: Web3Providers } = web3List.find(
             (item) => item.identifier === identifier
