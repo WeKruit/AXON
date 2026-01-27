@@ -30,9 +30,11 @@ describe('AccountService', () => {
   const mockSoul: Soul = {
     id: 'soul-1',
     organizationId: 'org-1',
+    name: 'Test Soul',
     type: SoulType.EMAIL,
     email: 'test@example.com',
     displayName: 'Test Soul',
+    status: 'active' as any,
     accountIds: [],
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -229,7 +231,7 @@ describe('AccountService', () => {
     });
 
     it('should throw ConflictException when updating handle to existing one', async () => {
-      const existingAccount = { ...mockAccount, handle: 'existing' };
+      const existingAccount = { ...mockAccount, id: 'acc-other', handle: 'existing' };
       accountRepository.findById.mockResolvedValue(mockAccount);
       accountRepository.findByHandle.mockResolvedValue(existingAccount);
 
@@ -398,7 +400,7 @@ describe('AccountService', () => {
     id: 'int-1',
     name: '@testuser',
     providerIdentifier: 'twitter',
-    picture: null,
+    picture: null as any,
     type: 'social',
     disabled: false,
   };
@@ -450,9 +452,9 @@ describe('AccountService', () => {
 
   describe('unlinkFromIntegration', () => {
     it('should unlink when account has integration', async () => {
-      accountRepository.findById.mockResolvedValue({ ...mockAccount, integrationId: 'int-1' } as any);
+      const linkedAccount = { ...mockAccount, integrationId: 'int-1' };
+      accountRepository.findById.mockResolvedValue(linkedAccount as any);
       accountRepository.unlinkIntegration.mockResolvedValue(undefined);
-      accountRepository.findById.mockResolvedValue(mockAccount);
 
       await service.unlinkFromIntegration('org-1', 'acc-1');
 
