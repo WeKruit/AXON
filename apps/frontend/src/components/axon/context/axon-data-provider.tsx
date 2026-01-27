@@ -10,9 +10,9 @@ import React, {
   useRef,
   ReactNode,
 } from 'react';
-import { useSouls, usePersonas, useProxies } from '../hooks/use-axon-api';
+import { useSouls, useAccounts, usePersonas, useProxies } from '../hooks/use-axon-api';
 import { useMatrix } from '../matrix/use-matrix';
-import type { Soul, Persona, Proxy, Platform } from '../types';
+import type { Soul, Account, Persona, Proxy, Platform } from '../types';
 import type { MatrixData, MatrixFilters } from '../matrix/types';
 
 /**
@@ -55,6 +55,7 @@ interface TabScrollState {
 interface AxonDataContextValue {
   // Prefetched data from the layout level
   souls: Soul[];
+  accounts: Account[];
   personas: Persona[];
   proxies: Proxy[];
   matrixData: MatrixData | null;
@@ -157,6 +158,10 @@ export function AxonDataProvider({ children }: AxonDataProviderProps) {
     error: soulsError,
     mutate: mutateSoulsInternal,
   } = useSouls();
+
+  const {
+    data: accounts,
+  } = useAccounts();
 
   const {
     data: personas,
@@ -305,6 +310,7 @@ export function AxonDataProvider({ children }: AxonDataProviderProps) {
     () => ({
       // Data
       souls: souls ?? [],
+      accounts: accounts ?? [],
       personas: personas ?? [],
       proxies: proxies ?? [],
       matrixData: matrixData ?? null,
@@ -344,6 +350,7 @@ export function AxonDataProvider({ children }: AxonDataProviderProps) {
     }),
     [
       souls,
+      accounts,
       personas,
       proxies,
       matrixData,

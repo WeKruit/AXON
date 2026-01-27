@@ -118,33 +118,18 @@ const MatrixRow: FC<MatrixRowProps> = memo(({
       const mapping = cellMap.get(cellKey) ?? null;
       const linkedAccount = accountLinkMap.get(cellKey);
       return (
-<<<<<<< HEAD
-        <div key={cellKey} style={matrixRowStyles}>
-          <MatrixCell
-            soulId={soul.id}
-            integrationId={integration.id}
-            mapping={mapping}
-            linkedAccount={linkedAccount}
-            bulkMode={bulkMode}
-            isSelected={selectedCells.has(cellKey)}
-            onToggle={onToggleMapping}
-            onSetPrimary={onSetPrimary}
-            onSelect={onCellSelect}
-          />
-        </div>
-=======
         <MatrixCell
           key={cellKey}
           soulId={soul.id}
           integrationId={integration.id}
           mapping={mapping}
+          linkedAccount={linkedAccount}
           bulkMode={bulkMode}
           isSelected={selectedCells.has(cellKey)}
           onToggle={onToggleMapping}
           onSetPrimary={onSetPrimary}
           onSelect={onCellSelect}
         />
->>>>>>> f8f0efc6 (feat: AXON frontend performance Phase 2 - state preservation & virtualization)
       );
     })}
   </div>
@@ -435,33 +420,15 @@ export const MatrixGrid: FC<MatrixGridProps> = memo(({
             ))}
           </div>
 
-<<<<<<< HEAD
-            {/* Soul rows - using content-visibility for performance with large datasets (WEC-184) */}
-            {souls.map((soul) => (
-              <MatrixRow
-                key={soul.id}
-                soul={soul}
-                integrations={integrations}
-                cellMap={cellMap}
-                accountLinkMap={accountLinkMap}
-                bulkMode={bulkMode}
-                selectedCells={selectedCells}
-                onToggleMapping={onToggleMapping}
-                onSetPrimary={onSetPrimary}
-                onCellSelect={handleCellSelect}
-              />
-            ))}
-=======
           {/* Virtualized rows container */}
           <div
             ref={parentRef}
             className="overflow-auto"
             style={{
-              height: Math.min(totalHeight, 600), // Max height of 600px, scroll after that
+              height: Math.min(totalHeight, 600),
               contain: 'strict',
             }}
           >
-            {/* Inner container with total height for scrollbar */}
             <div
               style={{
                 height: `${totalHeight}px`,
@@ -469,7 +436,6 @@ export const MatrixGrid: FC<MatrixGridProps> = memo(({
                 position: 'relative',
               }}
             >
-              {/* Render only visible rows */}
               {virtualRows.map((virtualRow) => {
                 const soul = souls[virtualRow.index];
                 return (
@@ -478,6 +444,7 @@ export const MatrixGrid: FC<MatrixGridProps> = memo(({
                     soul={soul}
                     integrations={integrations}
                     cellMap={cellMap}
+                    accountLinkMap={accountLinkMap}
                     bulkMode={bulkMode}
                     selectedCells={selectedCells}
                     onToggleMapping={onToggleMapping}
@@ -495,7 +462,6 @@ export const MatrixGrid: FC<MatrixGridProps> = memo(({
                 );
               })}
             </div>
->>>>>>> f8f0efc6 (feat: AXON frontend performance Phase 2 - state preservation & virtualization)
           </div>
         </div>
       </div>

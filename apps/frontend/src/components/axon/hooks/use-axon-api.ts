@@ -317,7 +317,6 @@ export function useAxonAnalytics(config?: SWRConfiguration) {
 }
 
 /**
-<<<<<<< HEAD
  * Soul dashboard data combining soul with its accounts
  */
 export interface SoulDashboardData {
@@ -514,29 +513,3 @@ export function useAccountIntegrationMutations() {
 
   return { linkAccountToIntegration, unlinkAccountFromIntegration };
 }
-=======
- * Combined hook for Soul Dashboard - fetches soul and accounts in parallel
- * Eliminates waterfall requests (WEC-181)
- */
-export function useSoulDashboard(soulId: string) {
-  const { data: soul, isLoading: soulLoading, error: soulError, mutate: mutateSoul } = useSoul(soulId);
-  const { data: accounts, isLoading: accountsLoading, error: accountsError, mutate: mutateAccounts } = useAccounts(soulId);
-
-  const isLoading = soulLoading || accountsLoading;
-  const error = soulError || accountsError;
-
-  const mutate = useCallback(async () => {
-    await Promise.all([mutateSoul(), mutateAccounts()]);
-  }, [mutateSoul, mutateAccounts]);
-
-  return {
-    soul,
-    accounts: accounts ?? [],
-    isLoading,
-    error,
-    mutate,
-    mutateSoul,
-    mutateAccounts,
-  };
-}
->>>>>>> f8f0efc6 (feat: AXON frontend performance Phase 2 - state preservation & virtualization)

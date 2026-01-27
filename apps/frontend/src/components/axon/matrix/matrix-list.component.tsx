@@ -2,13 +2,8 @@
 
 import { FC, useCallback, useMemo, useEffect, useRef } from 'react';
 import { MatrixGrid } from './matrix-grid.component';
-<<<<<<< HEAD
-import { useMatrix, useMatrixMutations, useMatrixStats } from './use-matrix';
-import { useAccounts } from '../hooks';
-=======
 import { useMatrixMutations, useMatrixStats } from './use-matrix';
 import { useAxonData, useAxonScrollPreservation } from '../context/axon-data-provider';
->>>>>>> f8f0efc6 (feat: AXON frontend performance Phase 2 - state preservation & virtualization)
 import { ErrorState } from '../ui/error-boundary';
 import { FilterIcon, GridIcon, RefreshIcon } from '../ui/icons';
 import { useToaster } from '@gitroom/react/toaster/toaster';
@@ -36,22 +31,17 @@ const PLATFORM_OPTIONS: { value: Platform | ''; label: string }[] = [
  * 3. Preserved scroll position when returning to this tab
  */
 export const MatrixListComponent: FC = () => {
-<<<<<<< HEAD
-  const { data, souls, integrations, isLoading, error, mutate } = useMatrix();
-  const { data: accounts } = useAccounts();
-=======
   // Get data and filter state from AxonDataProvider context
   const {
     matrixData: data,
     souls,
+    accounts,
     isLoadingMatrix: isLoading,
     matrixError: error,
     mutateMatrix: mutate,
     filters: contextFilters,
     setMatrixFilters,
   } = useAxonData();
-
->>>>>>> f8f0efc6 (feat: AXON frontend performance Phase 2 - state preservation & virtualization)
   const { toggleMapping, setPrimary, bulkOperation } = useMatrixMutations();
   const stats = useMatrixStats(data);
   const toaster = useToaster();

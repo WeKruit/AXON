@@ -84,17 +84,8 @@ export const SoulDashboardComponent: FC<SoulDashboardProps> = ({ soulId }) => {
   const handleAddAccount = useCallback(
     async (data: CreateAccountDto) => {
       try {
-<<<<<<< HEAD
         await createAccount({ ...data, soulId });
         await mutate();
-=======
-        const newAccount = await createAccount({ ...data, soulId });
-        // Force revalidation bypassing deduplication
-        await mutateAccounts(
-          (currentData: Account[] | undefined) => currentData ? [newAccount, ...currentData] : [newAccount],
-          { revalidate: true }
-        );
->>>>>>> f8f0efc6 (feat: AXON frontend performance Phase 2 - state preservation & virtualization)
         setIsAddAccountOpen(false);
         toaster.show('Account added successfully', 'success');
       } catch (error) {
@@ -114,15 +105,7 @@ export const SoulDashboardComponent: FC<SoulDashboardProps> = ({ soulId }) => {
 
       try {
         await deleteAccount(account.id);
-<<<<<<< HEAD
         await mutate();
-=======
-        // Force revalidation bypassing deduplication
-        await mutateAccounts(
-          (currentData: Account[] | undefined) => currentData?.filter((a: Account) => a.id !== account.id) ?? [],
-          { revalidate: true }
-        );
->>>>>>> f8f0efc6 (feat: AXON frontend performance Phase 2 - state preservation & virtualization)
         toaster.show('Account removed successfully', 'success');
       } catch (error) {
         toaster.show('Failed to remove account', 'warning');
@@ -225,7 +208,6 @@ export const SoulDashboardComponent: FC<SoulDashboardProps> = ({ soulId }) => {
               </button>
               </div>
 
-<<<<<<< HEAD
               {!accounts || accounts.length === 0 ? (
                 <div className="text-center py-8 text-textItemBlur">
                   <p className="mb-2">No channels connected yet</p>
@@ -252,30 +234,6 @@ export const SoulDashboardComponent: FC<SoulDashboardProps> = ({ soulId }) => {
               <SoulCredentialsManager soulId={soulId} />
             </div>
           )}
-=======
-            {!accounts || accounts.length === 0 ? (
-              <div className="text-center py-8 text-textItemBlur">
-                <p className="mb-2">No accounts linked to this soul yet</p>
-                <button
-                  onClick={() => setIsAddAccountOpen(true)}
-                  className="text-btnPrimary hover:underline"
-                >
-                  Add your first account
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {accounts.map((account: Account) => (
-                  <AccountRow
-                    key={account.id}
-                    account={account}
-                    onDelete={() => handleDeleteAccount(account)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
->>>>>>> f8f0efc6 (feat: AXON frontend performance Phase 2 - state preservation & virtualization)
         </div>
 
         {/* Sidebar */}
