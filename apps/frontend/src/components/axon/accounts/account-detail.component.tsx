@@ -6,6 +6,7 @@ import { useAccount, useAccountMutations, useSoul } from '../hooks';
 import { StatusBadge } from '../ui/status-badge';
 import { PlatformIcon } from '../ui/platform-icon';
 import { PurposeBadge, ProxyTypeBadge } from '../ui/purpose-badge';
+import { AccountIntegrationLink } from './account-integration-link';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import type { AccountStatus, AccountPurpose } from '../types';
 
@@ -210,6 +211,9 @@ export const AccountDetailComponent: FC<AccountDetailProps> = ({ accountId }) =>
               <p className="text-sm text-textItemBlur">No proxy assigned</p>
             )}
           </div>
+
+          {/* Integration Link */}
+          <AccountIntegrationLink account={account} onUpdate={mutate} />
 
           {/* Quick Actions */}
           <div className="bg-newBgLineColor rounded-lg p-4">

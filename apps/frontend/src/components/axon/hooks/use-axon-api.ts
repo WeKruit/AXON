@@ -315,3 +315,79 @@ export function useAxonAnalytics(config?: SWRConfiguration) {
 
   return useSWR<AxonAnalytics>('/axon/analytics', fetcher, { ...defaultSwrConfig, ...config });
 }
+
+/**
+ * Link account to integration response
+ */
+interface LinkAccountResult {
+  success: boolean;
+  account: Account;
+}
+
+/**
+ * Hook for account-integration linking operations
+ * Provides methods to link and unlink accounts from integrations
+ */
+export function useAccountIntegrationMutations() {
+  const fetch = useFetch();
+
+  const linkAccountToIntegration = useCallback(
+    async (accountId: string, integrationId: string): Promise<Account> => {
+      const response = await fetch(`/axon/accounts/${accountId}/link`, {
+        method: 'POST',
+        body: JSON.stringify({ integrationId }),
+      });
+      if (!response.ok) throw new Error('Failed to link account to integration');
+      const result: LinkAccountResult = await response.json();
+      return result.account;
+    },
+    [fetch]
+  );
+
+  const unlinkAccountFromIntegration = useCallback(
+    async (accountId: string): Promise<Account> => {
+      const response = await fetch(`/axon/accounts/${accountId}/unlink`, {
+        method: 'POST',
+      });
+      if (!response.ok) throw new Error('Failed to unlink account from integration');
+      const result: LinkAccountResult = await response.json();
+      return result.account;
+    },
+    [fetch]
+  );
+
+  return { linkAccountToIntegration, unlinkAccountFromIntegration };
+}
+
+/**
+ * Hook to fetch compatible integrations for an account
+ * Returns integrations that match the account's platform
+ */
+export function useCompatibleIntegrations(
+  platform: Account['platform'] | undefined,
+  config?: SWRConfiguration
+) {
+  const fetch = useFetch();
+
+  const fetcher = useCallback(async () => {
+    if (!platform) return [];
+    const response = await fetch('/integrations/list');
+    if (!response.ok) throw new Error('Failed to fetch integrations');
+    const result = await response.json();
+    const integrations = (result?.integrations ?? result ?? []) as Array<{
+      id: string;
+      name: string;
+      type: string;
+      picture?: string;
+      disabled?: boolean;
+    }>;
+    // Filter by platform (type) and exclude disabled integrations
+    return integrations.filter((i) => i.type === platform && !i.disabled);
+  }, [fetch, platform]);
+
+  return useSWR(
+    platform ? `/integrations/compatible/${platform}` : null,
+    fetcher,
+    { ...defaultSwrConfig, ...config }
+  );
+}
