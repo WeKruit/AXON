@@ -14,6 +14,8 @@ export {
   useAxonAnalytics,
   useSoulDashboard,
   usePreloadFunctions,
+  useAccountIntegrationMutations,
+  useCompatibleIntegrations,
 } from './use-axon-api';
 
 export type { SoulDashboardData } from './use-axon-api';

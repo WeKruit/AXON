@@ -21,6 +21,17 @@ export interface Soul {
   updatedAt: string;
 }
 
+/**
+ * Lightweight integration reference for account linking
+ * Used when account is linked to an integration (channel)
+ */
+export interface AccountIntegrationRef {
+  id: string;
+  name: string;
+  platform: Platform;
+  picture?: string;
+}
+
 export interface Account {
   id: string;
   soulId: string;
@@ -34,6 +45,10 @@ export interface Account {
   status: AccountStatus;
   proxyId?: string;
   proxy?: Proxy;
+  /** Optional integration ID - links account to a Postiz integration (channel) */
+  integrationId?: string;
+  /** Lightweight integration reference when linked */
+  integration?: AccountIntegrationRef;
   warmupProgress?: number;
   lastActivityAt?: string;
   metadata?: Record<string, unknown>;
@@ -156,6 +171,8 @@ export interface CreateAccountDto {
   displayName?: string;
   purpose: AccountPurpose;
   proxyId?: string;
+  /** Optional integration ID to link account on creation */
+  integrationId?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -164,6 +181,8 @@ export interface UpdateAccountDto {
   purpose?: AccountPurpose;
   status?: AccountStatus;
   proxyId?: string;
+  /** Integration ID to link/unlink account (null to unlink) */
+  integrationId?: string | null;
   metadata?: Record<string, unknown>;
 }
 

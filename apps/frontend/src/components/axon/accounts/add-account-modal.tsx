@@ -1,9 +1,10 @@
 'use client';
 
-import { FC, useCallback } from 'react';
+import { FC, useCallback, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import { useProxies } from '../hooks';
+import { useProxies, useCompatibleIntegrations } from '../hooks';
 import { PlatformIcon } from '../ui/platform-icon';
+import { LinkIcon } from '../ui/icons';
 import type { CreateAccountDto, Platform, AccountPurpose, ProxyType } from '../types';
 import { DEFAULT_PROXY_PURPOSE_MATRIX } from '../types';
 
@@ -66,11 +67,20 @@ export const AddAccountModal: FC<AddAccountModalProps> = ({ soulId, onClose, onS
       displayName: '',
       purpose: 'content',
       proxyId: '',
+      integrationId: '',
     },
   });
 
   const selectedPurpose = watch('purpose');
+  const selectedPlatform = watch('platform');
   const recommendedProxyTypes = purposes.find((p) => p.value === selectedPurpose)?.recommendedProxy || [];
+
+  // Fetch compatible integrations based on selected platform
+  const { data: compatibleIntegrations, isLoading: isLoadingIntegrations } = useCompatibleIntegrations(selectedPlatform);
+
+  const availableIntegrations = useMemo(() => {
+    return compatibleIntegrations || [];
+  }, [compatibleIntegrations]);
 
   const handleFormSubmit = useCallback(
     async (data: CreateAccountDto) => {
@@ -230,6 +240,39 @@ export const AddAccountModal: FC<AddAccountModalProps> = ({ soulId, onClose, onS
             </select>
             <p className="text-xs text-textItemBlur mt-1">
               Based on your selected purpose, we recommend using {recommendedProxyTypes.join(' or ')} proxies
+            </p>
+          </div>
+
+          {/* Integration Link Selection */}
+          <div>
+            <label className="block text-sm font-medium mb-1.5">
+              <span className="flex items-center gap-1.5">
+                <LinkIcon size="sm" />
+                Link to Integration (Optional)
+              </span>
+            </label>
+            <select
+              {...register('integrationId')}
+              className="w-full px-3 py-2 bg-newBgColorInner text-newTextColor rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none transition-colors"
+              disabled={isLoadingIntegrations}
+            >
+              <option value="">No integration (link later)</option>
+              {availableIntegrations.length > 0 && (
+                <optgroup label={`Available ${selectedPlatform} integrations`}>
+                  {availableIntegrations.map((integration) => (
+                    <option key={integration.id} value={integration.id}>
+                      {integration.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+            <p className="text-xs text-textItemBlur mt-1">
+              {isLoadingIntegrations
+                ? 'Loading compatible integrations...'
+                : availableIntegrations.length === 0
+                ? `No ${selectedPlatform} integrations found. You can link later after adding an integration.`
+                : 'Link this account to enable content scheduling and publishing through Postiz.'}
             </p>
           </div>
 

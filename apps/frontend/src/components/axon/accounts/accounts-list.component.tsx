@@ -6,9 +6,12 @@ import { useAccounts, useAccountMutations, useSouls } from '../hooks';
 import { StatusBadge } from '../ui/status-badge';
 import { PlatformIcon } from '../ui/platform-icon';
 import { PurposeBadge } from '../ui/purpose-badge';
+import { IntegrationLinkBadge } from './account-integration-link';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { deleteDialog } from '@gitroom/react/helpers/delete.dialog';
 import type { Account, AccountPurpose, Platform, AccountStatus } from '../types';
+
+type LinkStatusFilter = 'all' | 'linked' | 'unlinked';
 
 export const AccountsListComponent: FC = () => {
   const { data: accounts, isLoading, mutate } = useAccounts();
@@ -19,6 +22,7 @@ export const AccountsListComponent: FC = () => {
   const [filterPlatform, setFilterPlatform] = useState<Platform | 'all'>('all');
   const [filterPurpose, setFilterPurpose] = useState<AccountPurpose | 'all'>('all');
   const [filterStatus, setFilterStatus] = useState<AccountStatus | 'all'>('all');
+  const [filterLinkStatus, setFilterLinkStatus] = useState<LinkStatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredAccounts = useMemo(() => {
@@ -27,12 +31,23 @@ export const AccountsListComponent: FC = () => {
       if (filterPlatform !== 'all' && account.platform !== filterPlatform) return false;
       if (filterPurpose !== 'all' && account.purpose !== filterPurpose) return false;
       if (filterStatus !== 'all' && account.status !== filterStatus) return false;
+      if (filterLinkStatus === 'linked' && !account.integrationId) return false;
+      if (filterLinkStatus === 'unlinked' && account.integrationId) return false;
       if (searchQuery && !account.username.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
       return true;
     });
-  }, [accounts, filterPlatform, filterPurpose, filterStatus, searchQuery]);
+  }, [accounts, filterPlatform, filterPurpose, filterStatus, filterLinkStatus, searchQuery]);
+
+  // Calculate link stats
+  const linkStats = useMemo(() => {
+    if (!accounts) return { linked: 0, unlinked: 0 };
+    return {
+      linked: accounts.filter((a) => a.integrationId).length,
+      unlinked: accounts.filter((a) => !a.integrationId).length,
+    };
+  }, [accounts]);
 
   const handleDeleteAccount = useCallback(
     async (account: Account) => {
@@ -138,10 +153,19 @@ export const AccountsListComponent: FC = () => {
           <option value="suspended">Suspended</option>
           <option value="needs_verification">Needs Verification</option>
         </select>
+        <select
+          value={filterLinkStatus}
+          onChange={(e) => setFilterLinkStatus(e.target.value as LinkStatusFilter)}
+          className="px-3 py-2 bg-newBgColorInner text-newTextColor rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none text-sm"
+        >
+          <option value="all">All Link Status</option>
+          <option value="linked">Linked</option>
+          <option value="unlinked">Not Linked</option>
+        </select>
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
         <div className="bg-newBgLineColor rounded-lg p-3">
           <p className="text-xl font-semibold">{accounts?.length || 0}</p>
           <p className="text-xs text-textItemBlur">Total Accounts</p>
@@ -170,6 +194,14 @@ export const AccountsListComponent: FC = () => {
           </p>
           <p className="text-xs text-textItemBlur">Suspended</p>
         </div>
+        <div className="bg-newBgLineColor rounded-lg p-3">
+          <p className="text-xl font-semibold text-blue-500">{linkStats.linked}</p>
+          <p className="text-xs text-textItemBlur">Linked</p>
+        </div>
+        <div className="bg-newBgLineColor rounded-lg p-3">
+          <p className="text-xl font-semibold text-textItemBlur">{linkStats.unlinked}</p>
+          <p className="text-xs text-textItemBlur">Not Linked</p>
+        </div>
       </div>
 
       {/* Accounts Table */}
@@ -193,6 +225,7 @@ export const AccountsListComponent: FC = () => {
                 <th className="text-left text-xs font-medium text-textItemBlur px-4 py-3">Soul</th>
                 <th className="text-left text-xs font-medium text-textItemBlur px-4 py-3">Purpose</th>
                 <th className="text-left text-xs font-medium text-textItemBlur px-4 py-3">Status</th>
+                <th className="text-left text-xs font-medium text-textItemBlur px-4 py-3">Integration</th>
                 <th className="text-left text-xs font-medium text-textItemBlur px-4 py-3">Warmup</th>
                 <th className="text-right text-xs font-medium text-textItemBlur px-4 py-3">Actions</th>
               </tr>
@@ -224,6 +257,9 @@ export const AccountsListComponent: FC = () => {
                   </td>
                   <td className="px-4 py-3">
                     <StatusBadge status={account.status} size="sm" />
+                  </td>
+                  <td className="px-4 py-3">
+                    <IntegrationLinkBadge account={account} size="sm" />
                   </td>
                   <td className="px-4 py-3">
                     {account.warmupProgress !== undefined ? (

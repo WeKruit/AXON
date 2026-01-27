@@ -2,13 +2,24 @@
 
 import { FC, memo, useCallback, useState } from 'react';
 import clsx from 'clsx';
-import { CheckIcon, StarFilledIcon } from '../ui/icons';
+import { CheckIcon, StarFilledIcon, LinkIcon } from '../ui/icons';
 import type { SoulIntegrationMapping, CellState } from './types';
+
+/**
+ * Account link info for displaying in matrix cell tooltip
+ */
+export interface AccountLinkInfo {
+  accountId: string;
+  username: string;
+  isLinked: boolean;
+}
 
 export interface MatrixCellProps {
   soulId: string;
   integrationId: string;
   mapping: SoulIntegrationMapping | null;
+  /** Optional: accounts within this soul that are linked to this integration */
+  linkedAccounts?: AccountLinkInfo[];
   isLoading?: boolean;
   disabled?: boolean;
   bulkMode?: boolean;
@@ -39,6 +50,7 @@ export const MatrixCell: FC<MatrixCellProps> = memo(({
   soulId,
   integrationId,
   mapping,
+  linkedAccounts,
   isLoading = false,
   disabled = false,
   bulkMode = false,
@@ -51,6 +63,10 @@ export const MatrixCell: FC<MatrixCellProps> = memo(({
   const state = getCellState(mapping);
   const isConnected = state !== 'disconnected';
   const isPrimary = state === 'primary';
+
+  // Calculate account link status
+  const linkedCount = linkedAccounts?.filter((a) => a.isLinked).length ?? 0;
+  const hasLinkedAccounts = linkedCount > 0;
 
   const handleClick = useCallback(async () => {
     if (disabled || isProcessing) return;
