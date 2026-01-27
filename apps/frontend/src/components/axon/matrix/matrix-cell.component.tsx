@@ -3,16 +3,8 @@
 import { FC, memo, useCallback, useState } from 'react';
 import clsx from 'clsx';
 import { CheckIcon, StarFilledIcon, LinkIcon } from '../ui/icons';
+import type { AccountLinkInfo } from '../types';
 import type { SoulIntegrationMapping, CellState } from './types';
-
-/**
- * Account link info for displaying in matrix cell tooltip
- */
-export interface AccountLinkInfo {
-  accountId: string;
-  username: string;
-  isLinked: boolean;
-}
 
 export interface MatrixCellProps {
   soulId: string;
