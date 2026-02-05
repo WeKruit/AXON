@@ -11,7 +11,7 @@ import { SoulAddChannelModal } from '../ui/soul-add-channel-modal';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { deleteDialog } from '@gitroom/react/helpers/delete.dialog';
-import type { Account, CreateAccountDto, SoulStatus } from '../types';
+import type { Account, CreateAccountDto, SoulStatus, SoulWithStats } from '../types';
 import { AddAccountModal } from '../accounts/add-account-modal';
 
 interface SoulDashboardProps {
@@ -159,15 +159,15 @@ export const SoulDashboardComponent: FC<SoulDashboardProps> = ({ soulId }) => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main content */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Stats */}
-          {soul.stats && (
+          {/* Stats - only shown if soul has stats data */}
+          {(soul as SoulWithStats).stats && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <StatCard label="Total Accounts" value={soul.stats.totalAccounts} />
-              <StatCard label="Active Accounts" value={soul.stats.activeAccounts} />
-              <StatCard label="Total Posts" value={soul.stats.totalPosts} />
+              <StatCard label="Total Accounts" value={(soul as SoulWithStats).stats.totalAccounts} />
+              <StatCard label="Active Accounts" value={(soul as SoulWithStats).stats.activeAccounts} />
+              <StatCard label="Total Posts" value={(soul as SoulWithStats).stats.totalPosts} />
               <StatCard
                 label="Avg Engagement"
-                value={`${soul.stats.avgEngagementRate.toFixed(1)}%`}
+                value={`${(soul as SoulWithStats).stats.avgEngagementRate.toFixed(1)}%`}
               />
             </div>
           )}
