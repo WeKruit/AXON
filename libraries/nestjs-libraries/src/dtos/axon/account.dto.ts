@@ -135,7 +135,7 @@ export interface Account extends FirestoreDocument {
   status: AccountStatus;
   credentials: AccountCredentials;
   proxyId?: string;
-  integrationId?: string; // Linked Postiz integration ID
+  integrationId?: string; // Linked AXON integration ID
   metrics?: AccountMetrics;
   warmingConfig?: WarmingConfig;
   lastActivityAt?: Date;
@@ -220,7 +220,7 @@ export class CreateAccountDto {
   @IsOptional()
   tags?: string[];
 
-  @ApiPropertyOptional({ description: 'Linked Postiz integration ID' })
+  @ApiPropertyOptional({ description: 'Linked AXON integration ID' })
   @IsString()
   @IsOptional()
   integrationId?: string;
@@ -302,7 +302,7 @@ export class UpdateAccountDto {
   @IsOptional()
   tags?: string[];
 
-  @ApiPropertyOptional({ description: 'Linked Postiz integration ID (null to unlink)' })
+  @ApiPropertyOptional({ description: 'Linked AXON integration ID (null to unlink)' })
   @IsString()
   @IsOptional()
   integrationId?: string | null;
@@ -343,7 +343,7 @@ export class AccountResponseDto {
   @ApiPropertyOptional({ description: 'Assigned proxy ID' })
   proxyId?: string;
 
-  @ApiPropertyOptional({ description: 'Linked Postiz integration ID' })
+  @ApiPropertyOptional({ description: 'Linked AXON integration ID' })
   integrationId?: string;
 
   @ApiPropertyOptional({ description: 'Account metrics' })

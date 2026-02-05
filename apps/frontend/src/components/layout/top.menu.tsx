@@ -223,7 +223,7 @@ export const useMenuItem = () => {
           />
         </svg>
       ),
-      path: 'https://affiliate.postiz.com',
+      path: '/affiliate' /* TODO: Update to AXON affiliate domain */,
       role: ['ADMIN', 'SUPERADMIN', 'USER'],
       requireBilling: true,
     },

@@ -1,11 +1,13 @@
 'use client';
 
-import { FC, useState, useCallback, useEffect } from 'react';
+import { FC, useState, useCallback, useEffect, useMemo } from 'react';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
 import { AddProviderComponent } from '@gitroom/frontend/components/launches/add.provider.component';
 import { useSoulCredentials, useSoulCredentialMutations } from '../hooks/use-axon-api';
+import { getPlatformConfig } from '../config/platform-auth-config';
+import { PlatformSetupGuide } from './platform-setup-guide';
 
 interface SoulAddChannelModalProps {
   soulId: string;
@@ -27,13 +29,25 @@ export const SoulAddChannelModal: FC<SoulAddChannelModalProps> = ({
   const [integrationData, setIntegrationData] = useState<{ social: any[]; article: any[] } | null>(null);
   const [credPrompt, setCredPrompt] = useState<{ identifier: string; name: string } | null>(null);
   const [credsSaved, setCredsSaved] = useState<{ identifier: string; name: string } | null>(null);
-  const [clientId, setClientId] = useState('');
-  const [clientSecret, setClientSecret] = useState('');
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [useProxy, setUseProxy] = useState(false);
   const [proxyConnecting, setProxyConnecting] = useState(false);
 
   const credMap = new Map((credentials || []).map((c) => [c.platform, c]));
+
+  const backendUrl = typeof window !== 'undefined'
+    ? (process.env.NEXT_PUBLIC_BACKEND_URL || window.location.origin)
+    : '';
+
+  const activeConfig = useMemo(
+    () => credPrompt ? getPlatformConfig(credPrompt.identifier) : null,
+    [credPrompt],
+  );
+
+  const handleFieldChange = useCallback((key: string, value: string) => {
+    setFieldValues((prev) => ({ ...prev, [key]: value }));
+  }, []);
 
   // Switch to soul org and fetch integrations on mount
   useEffect(() => {
@@ -54,7 +68,7 @@ export const SoulAddChannelModal: FC<SoulAddChannelModalProps> = ({
     })();
   }, []);
 
-  // Open the original Postiz modal once data is loaded
+  // Open the original AXON modal once data is loaded
   useEffect(() => {
     if (!integrationData) return;
 
@@ -68,17 +82,15 @@ export const SoulAddChannelModal: FC<SoulAddChannelModalProps> = ({
           onPlatformClick={async (identifier) => {
             const hasCreds = credMap.has(identifier);
             if (hasCreds) {
-              // Has credentials — let the original flow continue
-              return;
+              return; // let the original OAuth flow continue
             }
-            // No credentials — close the Postiz modal, show credential form
+            // No credentials — close the AXON modal, show platform-specific setup guide
             const platformName = integrationData.social.find(
               (s) => s.identifier === identifier
             )?.name ?? identifier;
             modal.closeAll();
             setCredPrompt({ identifier, name: platformName });
-            setClientId('');
-            setClientSecret('');
+            setFieldValues({});
             return false; // prevent default OAuth flow
           }}
         />
@@ -87,19 +99,46 @@ export const SoulAddChannelModal: FC<SoulAddChannelModalProps> = ({
         onClose();
       },
     });
-
-    return () => {
-      // cleanup handled by modal system
-    };
   }, [integrationData]);
 
   const handleSaveAndConnect = useCallback(async () => {
-    if (!credPrompt || !clientId || !clientSecret) return;
+    if (!credPrompt || !activeConfig) return;
+
+    // Validate required fields
+    const missingRequired = activeConfig.fields
+      .filter((f) => f.required && !fieldValues[f.key]?.trim())
+      .map((f) => f.label);
+    if (missingRequired.length > 0) {
+      toaster.show(`Missing required fields: ${missingRequired.join(', ')}`, 'warning');
+      return;
+    }
+
+    // Map field values to API payload
+    let clientId = '';
+    let clientSecret = '';
+    const additionalConfig: Record<string, string> = {};
+
+    for (const field of activeConfig.fields) {
+      const value = fieldValues[field.key] || '';
+      if (field.storageKey === 'clientId') {
+        clientId = value;
+      } else if (field.storageKey === 'clientSecret') {
+        clientSecret = value;
+      } else if (field.storageKey === 'additionalConfig' && field.additionalConfigKey) {
+        additionalConfig[field.additionalConfigKey] = value;
+      }
+    }
+
     setSaving(true);
     try {
-      const result = await upsertCredential(soulId, credPrompt.identifier, clientId, clientSecret);
+      const result = await upsertCredential(
+        soulId,
+        credPrompt.identifier,
+        clientId,
+        clientSecret,
+        Object.keys(additionalConfig).length > 0 ? additionalConfig : undefined,
+      );
       console.log('[soul-creds] save result:', result);
-      // Show confirmation screen instead of reopening platform picker
       setCredsSaved({ identifier: credPrompt.identifier, name: credPrompt.name });
       setCredPrompt(null);
       setSaving(false);
@@ -108,13 +147,12 @@ export const SoulAddChannelModal: FC<SoulAddChannelModalProps> = ({
       toaster.show('Failed to save credentials', 'warning');
       setSaving(false);
     }
-  }, [credPrompt, clientId, clientSecret, soulId, upsertCredential, fetchApi, modal, toaster]);
+  }, [credPrompt, activeConfig, fieldValues, soulId, upsertCredential, toaster]);
 
   const handleTryConnection = useCallback(async () => {
     if (!credsSaved) return;
 
     if (useProxy) {
-      // Call the proxy-connect endpoint (TODO: backend not yet implemented)
       setProxyConnecting(true);
       try {
         const res = await fetchApi(`/integrations/social/${credsSaved.identifier}/proxy-connect`, {
@@ -133,7 +171,7 @@ export const SoulAddChannelModal: FC<SoulAddChannelModalProps> = ({
       return;
     }
 
-    // Normal flow: directly trigger the OAuth flow for this specific platform
+    // Directly trigger the OAuth flow for this specific platform
     try {
       const { url, err } = await (
         await fetchApi(`/integrations/social/${credsSaved.identifier}`)
@@ -146,7 +184,7 @@ export const SoulAddChannelModal: FC<SoulAddChannelModalProps> = ({
     } catch {
       toaster.show('Failed to start OAuth flow', 'warning');
     }
-  }, [credsSaved, useProxy, fetchApi, modal, onClose, toaster]);
+  }, [credsSaved, useProxy, fetchApi, toaster]);
 
   // Credentials saved confirmation screen
   if (credsSaved) {
@@ -191,6 +229,16 @@ export const SoulAddChannelModal: FC<SoulAddChannelModalProps> = ({
             </button>
             <button
               onClick={() => {
+                const config = getPlatformConfig(credsSaved.identifier);
+                // Pre-fill from existing credential data if available
+                const existing = credMap.get(credsSaved.identifier);
+                const prefilled: Record<string, string> = {};
+                if (existing) {
+                  for (const field of config.fields) {
+                    if (field.storageKey === 'clientId') prefilled[field.key] = existing.clientId || '';
+                  }
+                }
+                setFieldValues(prefilled);
                 setCredPrompt({ identifier: credsSaved.identifier, name: credsSaved.name });
                 setCredsSaved(null);
               }}
@@ -210,12 +258,16 @@ export const SoulAddChannelModal: FC<SoulAddChannelModalProps> = ({
     );
   }
 
-  // If showing credential prompt (no creds for platform)
-  if (credPrompt) {
+  // Platform-specific setup guide with credential form
+  if (credPrompt && activeConfig) {
+    const allRequiredFilled = activeConfig.fields
+      .filter((f) => f.required)
+      .every((f) => fieldValues[f.key]?.trim());
+
     return (
       <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/50" onClick={onClose}>
         <div
-          className="bg-newBgColor border border-newTableBorder rounded-xl w-full max-w-md p-6"
+          className="bg-newBgColor border border-newTableBorder rounded-xl w-full max-w-lg max-h-[85vh] overflow-y-auto p-6"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between mb-4">
@@ -225,50 +277,36 @@ export const SoulAddChannelModal: FC<SoulAddChannelModalProps> = ({
             </button>
           </div>
           <p className="text-sm text-textItemBlur mb-4">
-            This soul does not have OAuth credentials for {credPrompt.name}. Enter your app credentials to continue.
+            Follow the steps below to set up {credPrompt.name} credentials for this soul.
           </p>
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium mb-1">Client ID / API Key</label>
-              <input
-                type="text"
-                value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
-                placeholder="Enter Client ID"
-                className="w-full px-3 py-2 text-sm bg-newBgColorInner border border-newTableBorder rounded-lg focus:border-btnPrimary focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Client Secret / API Secret</label>
-              <input
-                type="password"
-                value={clientSecret}
-                onChange={(e) => setClientSecret(e.target.value)}
-                placeholder="Enter Client Secret"
-                className="w-full px-3 py-2 text-sm bg-newBgColorInner border border-newTableBorder rounded-lg focus:border-btnPrimary focus:outline-none"
-              />
-            </div>
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={handleSaveAndConnect}
-                disabled={saving || !clientId || !clientSecret}
-                className="flex-1 px-4 py-2 bg-btnPrimary text-white rounded-lg text-sm font-medium hover:bg-btnPrimary/90 disabled:opacity-50 transition-colors"
-              >
-                {saving ? 'Saving...' : 'Save & Connect'}
-              </button>
-              <button
-                onClick={onClose}
-                className="px-4 py-2 bg-newBgLineColor rounded-lg text-sm hover:bg-newBgLineColor/80 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
+
+          <PlatformSetupGuide
+            config={activeConfig}
+            fieldValues={fieldValues}
+            onFieldChange={handleFieldChange}
+            backendUrl={backendUrl}
+          />
+
+          <div className="flex gap-3 pt-4 mt-4 border-t border-newTableBorder">
+            <button
+              onClick={handleSaveAndConnect}
+              disabled={saving || !allRequiredFilled}
+              className="flex-1 px-4 py-2 bg-btnPrimary text-white rounded-lg text-sm font-medium hover:bg-btnPrimary/90 disabled:opacity-50 transition-colors"
+            >
+              {saving ? 'Saving...' : 'Save Credentials'}
+            </button>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-newBgLineColor rounded-lg text-sm hover:bg-newBgLineColor/80 transition-colors"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       </div>
     );
   }
 
-  // While loading integrations, show nothing (the Postiz modal will open via useEffect)
+  // While loading integrations, show nothing (the AXON modal will open via useEffect)
   return null;
 };

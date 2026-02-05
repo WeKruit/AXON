@@ -246,7 +246,7 @@ export class AccountRepository {
   }
 
   /**
-   * Link an account to a Postiz integration
+   * Link an account to an AXON integration
    */
   async linkIntegration(organizationId: string, accountId: string, integrationId: string): Promise<void> {
     const existing = await this.findById(organizationId, accountId);
@@ -257,7 +257,7 @@ export class AccountRepository {
   }
 
   /**
-   * Unlink an account from its Postiz integration
+   * Unlink an account from its AXON integration
    */
   async unlinkIntegration(organizationId: string, accountId: string): Promise<void> {
     const existing = await this.findById(organizationId, accountId);

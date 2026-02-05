@@ -6,7 +6,7 @@ import 'react-tooltip/dist/react-tooltip.css';
 import '@copilotkit/react-ui/styles.css';
 import LayoutContext from '@gitroom/frontend/components/layout/layout.context';
 import { ReactNode } from 'react';
-import { Plus_Jakarta_Sans } from 'next/font/google';
+import { Plus_Jakarta_Sans, Halant } from 'next/font/google';
 import PlausibleProvider from 'next-plausible';
 import clsx from 'clsx';
 import { VariableContextComponent } from '@gitroom/react/helpers/variable.context';
@@ -30,6 +30,13 @@ const jakartaSans = Plus_Jakarta_Sans({
   weight: ['600', '500'],
   style: ['normal', 'italic'],
   subsets: ['latin'],
+  variable: '--font-sans',
+});
+
+const halant = Halant({
+  weight: ['400', '500', '600', '700'],
+  subsets: ['latin'],
+  variable: '--font-halant',
 });
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
@@ -43,7 +50,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         <link rel="icon" href="/favicon.ico" sizes="any" />
       </head>
       <body
-        className={clsx(jakartaSans.className, 'dark text-primary !bg-primary')}
+        className={clsx(jakartaSans.variable, halant.variable, jakartaSans.className, 'light text-primary !bg-primary')}
       >
         <VariableContextComponent
           storageProvider={
@@ -86,7 +93,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             <DubAnalytics />
             <FacebookComponent />
             <Plausible
-              domain={!!process.env.IS_GENERAL ? 'postiz.com' : 'gitroom.com'}
+              domain={process.env.PLAUSIBLE_DOMAIN || 'localhost'}
             >
               <PHProvider
                 phkey={process.env.NEXT_PUBLIC_POSTHOG_KEY}

@@ -1,273 +1,422 @@
-# M4: Soul-Channel Matrix - Task Breakdown
+# M4: Soul-Channel-Account Management - Task Overview
 
 ## Overview
 
-This document tracks all tasks for implementing the Soul-Channel Matrix feature, which enables many-to-many relationships between AXON Souls (Firestore) and Postiz Integrations (PostgreSQL).
+This document provides an overview of all tasks for the Soul-Channel-Account Management System.
 
-**Epic**: [WEC-164](https://linear.app/wecrew-axon/issue/WEC-164/m4-soul-channel-matrix-epic)
+**Epic**: [WEC-164](https://linear.app/wecrew-axon/issue/WEC-164)
 
 ---
 
-## Task Dependency Graph
+## Phase 2 Task Documents
+
+| Document | Description | Assignee |
+|----------|-------------|----------|
+| [m4-phase2-backend.md](./m4-phase2-backend.md) | Backend implementation tasks | Blake |
+| [m4-phase2-frontend.md](./m4-phase2-frontend.md) | Frontend implementation tasks | Casey |
+| [m4-phase2-tests.md](./m4-phase2-tests.md) | Test implementation tasks | All |
+
+---
+
+## Features
+
+1. Many-to-many relationships between Souls and Integrations (Matrix)
+2. Account-to-Integration linking
+3. Credentials and proxy management
+4. Future: Proxy-based posting and browser automation
+
+---
+
+## Phase Status Summary
+
+| Phase | Description | Status |
+|-------|-------------|--------|
+| Phase 1 | Soul-Channel Matrix | ✅ Complete |
+| Phase 2 | Account-Integration Linking | 🔄 Ready to Start |
+| Phase 3 | Proxy-Based Operations | 🔜 Future |
+| Phase 4 | Browser Automation | 🔜 Future |
+
+---
+
+## Phase 1: Soul-Channel Matrix ✅ COMPLETE
+
+### Backend Tasks (Blake) - All Complete
+
+| Ticket | Title | Status |
+|--------|-------|--------|
+| WEC-165 | Create SoulIntegrationMapping Prisma Schema | ✅ Done |
+| WEC-166 | Create Matrix DTOs | ✅ Done |
+| WEC-167 | Create Matrix Repository | ✅ Done |
+| WEC-168 | Create Matrix Service | ✅ Done |
+| WEC-169 | Create Matrix Controller | ✅ Done |
+| WEC-177 | Register Matrix Module in App | ✅ Done |
+| WEC-178 | Matrix Backend Unit Tests | ✅ Done |
+
+### Frontend Tasks (Casey) - All Complete
+
+| Ticket | Title | Status |
+|--------|-------|--------|
+| WEC-170 | Create Matrix TypeScript Types | ✅ Done |
+| WEC-171 | Create Matrix API Hooks | ✅ Done |
+| WEC-173 | Create Matrix Cell Component | ✅ Done |
+| WEC-172 | Create Matrix Grid Component | ✅ Done |
+| WEC-175 | Add Matrix Navigation to AXON Sidebar | ✅ Done |
+| WEC-174 | Create Matrix Page | ✅ Done |
+
+---
+
+## Phase 2: Account-Integration Linking 🔄
+
+### Task Dependency Graph
 
 ```
                     ┌─────────────────────────────────────────┐
-                    │         WEC-164: Epic                   │
+                    │      Phase 2: Account-Integration       │
+                    │              Linking                    │
                     └─────────────────────────────────────────┘
                                         │
           ┌─────────────────────────────┼─────────────────────────────┐
           │                             │                             │
           ▼                             │                             ▼
 ┌─────────────────┐                     │               ┌─────────────────┐
-│  WEC-165        │                     │               │  WEC-170        │
+│  WEC-201        │                     │               │  WEC-206        │
 │  Prisma Schema  │                     │               │  FE Types       │
+│  Update         │                     │               │  Update         │
 │  (Blake)        │                     │               │  (Casey)        │
 └────────┬────────┘                     │               └────────┬────────┘
          │                              │                        │
          ▼                              │                        │
 ┌─────────────────┐                     │                        │
-│  WEC-166        │                     │                        │
-│  DTOs           │                     │                        │
+│  WEC-202        │                     │                        │
+│  Account DTO    │                     │                        │
+│  Update         │                     │                        │
 │  (Blake)        │                     │                        │
 └────────┬────────┘                     │                        │
          │                              │                        │
          ▼                              │                        │
 ┌─────────────────┐                     │                        │
-│  WEC-167        │                     │                        │
-│  Repository     │                     │                        │
+│  WEC-203        │                     │                        │
+│  Account Repo   │                     │                        │
+│  Link Methods   │                     │                        │
 │  (Blake)        │                     │                        │
 └────────┬────────┘                     │                        │
          │                              │                        │
          ▼                              │                        │
 ┌─────────────────┐                     │                        │
-│  WEC-168        │                     │                        │
-│  Service        │                     │                        │
+│  WEC-204        │                     │                        │
+│  Account Service│                     │                        │
+│  Link Logic     │                     │                        │
 │  (Blake)        │                     │                        │
 └────────┬────────┘                     │                        │
          │                              │                        │
          ▼                              │                        │
-┌─────────────────┐                     │                        │
-│  WEC-169        │◄────────────────────┼────────────────────────┤
-│  Controller     │                     │                        │
-│  (Blake)        │                     │                        │
-└────────┬────────┘                     │                        │
-         │                              │                        │
-         ├──────────────────────────────┤                        │
-         │                              │                        │
-         ▼                              │                        ▼
 ┌─────────────────┐                     │               ┌─────────────────┐
-│  WEC-177        │                     │               │  WEC-171        │
-│  Module Reg     │                     │               │  FE Hooks       │
+│  WEC-205        │                     │               │  WEC-207        │
+│  Controller     │◄────────────────────┼───────────────│  Integration    │
+│  Endpoint       │                     │               │  Link Component │
 │  (Blake)        │                     │               │  (Casey)        │
 └────────┬────────┘                     │               └────────┬────────┘
          │                              │                        │
          ▼                              │                        │
-┌─────────────────┐                     │               ┌─────────────────┐
-│  WEC-178        │                     │               │  WEC-173        │
-│  BE Tests       │                     │               │  Cell Component │
-│  (Blake)        │                     │               │  (Casey)        │
-└─────────────────┘                     │               └────────┬────────┘
+┌─────────────────┐                     │                        │
+│  WEC-208        │                     │                        │
+│  Matrix Service │                     │                        │
+│  Auto-Link      │                     │                        │
+│  (Blake)        │                     │                        │
+└────────┬────────┘                     │                        │
+         │                              │                        │
+         └──────────────────────────────┼────────────────────────┤
                                         │                        │
-                                        │                        ▼
-                                        │               ┌─────────────────┐
-                                        │               │  WEC-172        │
-                                        │               │  Grid Component │
-                                        │               │  (Casey)        │
-                                        │               └────────┬────────┘
-                                        │                        │
-                                        │               ┌────────┴────────┐
-                                        │               │                 │
-                                        │               ▼                 ▼
-                                        │     ┌─────────────────┐ ┌─────────────────┐
-                                        │     │  WEC-175        │ │  WEC-174        │
-                                        │     │  Navigation     │ │  Matrix Page    │
-                                        │     │  (Casey)        │ │  (Casey)        │
-                                        │     └─────────────────┘ └────────┬────────┘
-                                        │                                  │
-                                        │                                  ▼
-                                        │                         ┌─────────────────┐
-                                        │                         │  WEC-176        │
-                                        │                         │  Content Integ  │
-                                        │                         │  (Casey)        │
-                                        │                         └────────┬────────┘
-                                        │                                  │
-                                        └──────────────────────────────────┤
-                                                                           │
-                                        ┌──────────────────────────────────┤
-                                        │                                  │
-                                        ▼                                  ▼
-                              ┌─────────────────┐               ┌─────────────────┐
-                              │  WEC-179        │               │  WEC-180        │
-                              │  FE Tests       │               │  E2E Tests      │
-                              │  (Casey)        │               │  (All)          │
-                              └─────────────────┘               └─────────────────┘
+                                        ▼                        ▼
+                              ┌─────────────────┐      ┌─────────────────┐
+                              │  WEC-209        │      │  WEC-210        │
+                              │  Backend Tests  │      │  Frontend Tests │
+                              │  (Blake)        │      │  (Casey)        │
+                              └─────────────────┘      └─────────────────┘
 ```
 
----
-
-## Backend Tasks (Blake)
-
-### Phase 1: Database & DTOs
+### Backend Tasks (Blake)
 
 | Ticket | Title | Priority | Status | Blocked By |
 |--------|-------|----------|--------|------------|
-| [WEC-165](https://linear.app/wecrew-axon/issue/WEC-165) | Create SoulIntegrationMapping Prisma Schema | Urgent | Backlog | - |
-| [WEC-166](https://linear.app/wecrew-axon/issue/WEC-166) | Create Matrix DTOs | High | Backlog | WEC-165 |
+| WEC-201 | Add accountId to SoulIntegrationMapping schema | High | Backlog | - |
+| WEC-202 | Add integrationId to Account DTO | High | Backlog | - |
+| WEC-203 | Add Account Repository link methods | High | Backlog | WEC-202 |
+| WEC-204 | Add Account Service link logic | High | Backlog | WEC-203 |
+| WEC-205 | Add Account Controller link endpoint | High | Backlog | WEC-204 |
+| WEC-208 | Update Matrix Service auto-link | Medium | Backlog | WEC-201, WEC-204 |
+| WEC-209 | Phase 2 Backend Tests | Medium | Backlog | WEC-208 |
 
-### Phase 2: Repository & Service
-
-| Ticket | Title | Priority | Status | Blocked By |
-|--------|-------|----------|--------|------------|
-| [WEC-167](https://linear.app/wecrew-axon/issue/WEC-167) | Create Matrix Repository | High | Backlog | WEC-165, WEC-166 |
-| [WEC-168](https://linear.app/wecrew-axon/issue/WEC-168) | Create Matrix Service | High | Backlog | WEC-167 |
-
-### Phase 3: Controller & Module
+### Frontend Tasks (Casey)
 
 | Ticket | Title | Priority | Status | Blocked By |
 |--------|-------|----------|--------|------------|
-| [WEC-169](https://linear.app/wecrew-axon/issue/WEC-169) | Create Matrix Controller | High | Backlog | WEC-168 |
-| [WEC-177](https://linear.app/wecrew-axon/issue/WEC-177) | Register Matrix Module in App | High | Backlog | WEC-169 |
+| WEC-206 | Update Account types with integrationId | High | Backlog | - |
+| WEC-207 | Create AccountIntegrationLink component | High | Backlog | WEC-206, WEC-205 |
+| WEC-210 | Phase 2 Frontend Tests | Medium | Backlog | WEC-207 |
 
-### Phase 4: Testing
+### Task Details
 
-| Ticket | Title | Priority | Status | Blocked By |
-|--------|-------|----------|--------|------------|
-| [WEC-178](https://linear.app/wecrew-axon/issue/WEC-178) | Matrix Backend Unit Tests | High | Backlog | WEC-177 |
+#### WEC-201: Add accountId to SoulIntegrationMapping schema
 
----
+**File:** `libraries/nestjs-libraries/src/database/prisma/schema.prisma`
 
-## Frontend Tasks (Casey)
+**Changes:**
+```prisma
+model SoulIntegrationMapping {
+  // ... existing fields ...
+  accountId      String?      // NEW: Firestore Account ID
+  @@index([accountId])        // NEW: Index for lookups
+}
+```
 
-### Phase 1: Types & Hooks
-
-| Ticket | Title | Priority | Status | Blocked By |
-|--------|-------|----------|--------|------------|
-| [WEC-170](https://linear.app/wecrew-axon/issue/WEC-170) | Create Matrix TypeScript Types | High | Backlog | - |
-| [WEC-171](https://linear.app/wecrew-axon/issue/WEC-171) | Create Matrix API Hooks | High | Backlog | WEC-170, WEC-169 |
-
-### Phase 2: Components
-
-| Ticket | Title | Priority | Status | Blocked By |
-|--------|-------|----------|--------|------------|
-| [WEC-173](https://linear.app/wecrew-axon/issue/WEC-173) | Create Matrix Cell Component | High | Backlog | WEC-171 |
-| [WEC-172](https://linear.app/wecrew-axon/issue/WEC-172) | Create Matrix Grid Component | Urgent | Backlog | WEC-171, WEC-173 |
-
-### Phase 3: Page & Navigation
-
-| Ticket | Title | Priority | Status | Blocked By |
-|--------|-------|----------|--------|------------|
-| [WEC-175](https://linear.app/wecrew-axon/issue/WEC-175) | Add Matrix Navigation to AXON Sidebar | High | Backlog | - |
-| [WEC-174](https://linear.app/wecrew-axon/issue/WEC-174) | Create Matrix Page | Urgent | Backlog | WEC-172, WEC-175 |
-
-### Phase 4: Integration & Testing
-
-| Ticket | Title | Priority | Status | Blocked By |
-|--------|-------|----------|--------|------------|
-| [WEC-176](https://linear.app/wecrew-axon/issue/WEC-176) | Integrate Soul Selector in Content Creation | Medium | Backlog | WEC-174 |
-| [WEC-179](https://linear.app/wecrew-axon/issue/WEC-179) | Matrix Frontend Component Tests | Medium | Backlog | WEC-174 |
+**Acceptance Criteria:**
+- [ ] accountId field added to schema
+- [ ] Index created for accountId
+- [ ] Migration runs successfully
+- [ ] Existing mappings unaffected (null accountId)
 
 ---
 
-## Integration Testing
+#### WEC-202: Add integrationId to Account DTO
 
-| Ticket | Title | Priority | Status | Blocked By |
-|--------|-------|----------|--------|------------|
-| [WEC-180](https://linear.app/wecrew-axon/issue/WEC-180) | Matrix E2E Tests | Medium | Backlog | WEC-174, WEC-177 |
+**File:** `libraries/nestjs-libraries/src/dtos/axon/account.dto.ts`
+
+**Changes:**
+- Add `integrationId?: string` to Account interface
+- Add to CreateAccountDto
+- Add to UpdateAccountDto
+- Add to AccountResponseDto
+
+**Acceptance Criteria:**
+- [ ] integrationId field in all relevant DTOs
+- [ ] Optional field (not required)
+- [ ] Validation decorators added
 
 ---
 
-## Developer Assignments
+#### WEC-203: Add Account Repository link methods
 
-### Blake (Backend & Infrastructure)
+**File:** `libraries/nestjs-libraries/src/database/firestore/collections/accounts/account.repository.ts`
+
+**New Methods:**
+```typescript
+linkIntegration(orgId, accountId, integrationId)
+unlinkIntegration(orgId, accountId)
+findByIntegrationId(orgId, integrationId)
+```
+
+**Acceptance Criteria:**
+- [ ] linkIntegration method implemented
+- [ ] unlinkIntegration method implemented
+- [ ] findByIntegrationId method implemented
+- [ ] Proper error handling
+
+---
+
+#### WEC-204: Add Account Service link logic
+
+**File:** `libraries/nestjs-libraries/src/database/firestore/collections/accounts/account.service.ts`
+
+**New Methods:**
+```typescript
+linkToIntegration(orgId, accountId, integrationId)
+unlinkFromIntegration(orgId, accountId)
+autoLinkByHandle(orgId, integrationId, platform, handle)
+```
+
+**Acceptance Criteria:**
+- [ ] Platform validation (account.platform === integration.providerIdentifier)
+- [ ] Proper error messages
+- [ ] autoLinkByHandle finds and links matching account
+
+---
+
+#### WEC-205: Add Account Controller link endpoint
+
+**File:** `apps/backend/src/api/routes/accounts.controller.ts`
+
+**New Endpoint:**
+```typescript
+PATCH /axon/accounts/:id/integration
+Body: { integrationId: string | null }
+```
+
+**Acceptance Criteria:**
+- [ ] Endpoint created with proper guards
+- [ ] Swagger documentation
+- [ ] Returns updated account
+
+---
+
+#### WEC-206: Update Account types with integrationId
+
+**File:** `apps/frontend/src/components/axon/types.ts`
+
+**Changes:**
+```typescript
+interface Account {
+  // ... existing ...
+  integrationId?: string;
+  integration?: {
+    id: string;
+    name: string;
+    platform: string;
+    picture?: string;
+  };
+}
+```
+
+**Acceptance Criteria:**
+- [ ] integrationId in Account type
+- [ ] Optional integration object for display
+
+---
+
+#### WEC-207: Create AccountIntegrationLink component
+
+**File:** `apps/frontend/src/components/axon/accounts/account-integration-link.tsx`
+
+**Component:**
+- Dropdown showing compatible integrations (same platform)
+- Link/unlink functionality
+- Loading states
+- Toast notifications
+
+**Acceptance Criteria:**
+- [ ] Shows only compatible integrations
+- [ ] Can link to integration
+- [ ] Can unlink from integration
+- [ ] Loading state during operation
+- [ ] Success/error toasts
+
+---
+
+#### WEC-208: Update Matrix Service auto-link
+
+**File:** `libraries/nestjs-libraries/src/database/prisma/matrix/matrix.service.ts`
+
+**Changes:**
+- When creating mapping, auto-populate accountId by finding matching account (same soul + same platform as integration)
+
+**Acceptance Criteria:**
+- [ ] createMapping auto-finds accountId
+- [ ] Works when account exists
+- [ ] Works when no account (accountId = null)
+
+---
+
+### Developer Assignments (Phase 2)
+
+#### Blake (Backend & Infrastructure)
 - **Branch prefix**: `feature/blake/`
-- **Tickets**: WEC-165, WEC-166, WEC-167, WEC-168, WEC-169, WEC-177, WEC-178
+- **Tickets**: WEC-201, WEC-202, WEC-203, WEC-204, WEC-205, WEC-208, WEC-209
 - **Total**: 7 tickets
 
-### Casey (Frontend)
+#### Casey (Frontend)
 - **Branch prefix**: `feature/casey/`
-- **Tickets**: WEC-170, WEC-171, WEC-172, WEC-173, WEC-174, WEC-175, WEC-176, WEC-179
-- **Total**: 8 tickets
+- **Tickets**: WEC-206, WEC-207, WEC-210
+- **Total**: 3 tickets
 
 ---
 
-## Parallel Work Strategy
+## Phase 3: Proxy-Based Operations 🔜
 
-```
-Week 1:
-├── Blake: WEC-165 (Schema) → WEC-166 (DTOs) → WEC-167 (Repository)
-└── Casey: WEC-170 (Types) → WEC-175 (Navigation)
+### Overview
 
-Week 2:
-├── Blake: WEC-168 (Service) → WEC-169 (Controller) → WEC-177 (Module)
-└── Casey: WEC-171 (Hooks) → WEC-173 (Cell) → WEC-172 (Grid)
+Enable using proxies for API calls when posting.
 
-Week 3:
-├── Blake: WEC-178 (BE Tests)
-└── Casey: WEC-174 (Page) → WEC-176 (Content Integration) → WEC-179 (FE Tests)
+### Tasks (To Be Created)
 
-Week 4:
-└── All: WEC-180 (E2E Tests) → Final QA
-```
+| Ticket | Title | Assignee |
+|--------|-------|----------|
+| WEC-301 | Create ProxyHttpClient with proxy support | Blake |
+| WEC-302 | Update Integration providers to accept proxy | Blake |
+| WEC-303 | Update post workflow to fetch proxy | Blake |
+| WEC-304 | Add proxy health check endpoint | Blake |
+| WEC-305 | Add proxy status to Matrix UI | Casey |
+
+### Dependencies
+
+- Phase 2 must be complete (need account → integration → proxy chain)
 
 ---
 
-## Files to Create
+## Phase 4: Browser Automation 🔜
 
-### Backend (Blake)
+### Overview
+
+Use Puppeteer/Playwright for actions not available via API.
+
+### Tasks (To Be Created)
+
+| Ticket | Title | Assignee |
+|--------|-------|----------|
+| WEC-401 | Set up Playwright infrastructure | Blake |
+| WEC-402 | Create browser worker pool | Blake |
+| WEC-403 | Implement login with credentials | Blake |
+| WEC-404 | Implement proxy configuration for browsers | Blake |
+| WEC-405 | Create account verification flow | Blake |
+| WEC-406 | Create browser action queue UI | Casey |
+
+### Dependencies
+
+- Phase 2 must be complete
+- Phase 3 recommended (proxy support)
+
+---
+
+## Files Changed Summary
+
+### Phase 1 (Complete)
 
 ```
-libraries/nestjs-libraries/src/
-├── database/prisma/
-│   ├── schema.prisma                     # UPDATE: Add SoulIntegrationMapping
-│   └── matrix/
-│       ├── matrix.module.ts              # NEW
-│       ├── matrix.repository.ts          # NEW
-│       ├── matrix.service.ts             # NEW
-│       ├── matrix.repository.spec.ts     # NEW
-│       └── matrix.service.spec.ts        # NEW
-└── dtos/matrix/
-    ├── index.ts                          # NEW
-    └── matrix.dto.ts                     # NEW
-
-apps/backend/src/api/routes/
-├── matrix.controller.ts                  # NEW
-└── matrix.controller.spec.ts             # NEW
+✅ libraries/nestjs-libraries/src/database/prisma/schema.prisma
+✅ libraries/nestjs-libraries/src/database/prisma/matrix/
+✅ libraries/nestjs-libraries/src/dtos/matrix/
+✅ apps/backend/src/api/routes/matrix.controller.ts
+✅ apps/frontend/src/components/axon/matrix/
+✅ apps/frontend/src/app/(app)/(site)/axon/matrix/
 ```
 
-### Frontend (Casey)
+### Phase 2 (To Do)
 
 ```
-apps/frontend/src/
-├── app/(app)/(site)/axon/matrix/
-│   └── page.tsx                          # NEW
-├── components/axon/
-│   ├── types/
-│   │   └── matrix.types.ts               # NEW
-│   ├── hooks/
-│   │   └── use-matrix.ts                 # NEW
-│   ├── matrix/
-│   │   ├── matrix-grid.component.tsx     # NEW
-│   │   ├── matrix-cell.component.tsx     # NEW
-│   │   ├── matrix-stats.component.tsx    # NEW
-│   │   └── matrix-filters.component.tsx  # NEW
-│   └── layout/
-│       └── axon-sub-nav.tsx              # UPDATE: Add Matrix link
-└── components/launches/
-    └── [existing files]                  # UPDATE: Add Soul selector
+📝 libraries/nestjs-libraries/src/database/prisma/schema.prisma (add accountId)
+📝 libraries/nestjs-libraries/src/dtos/axon/account.dto.ts (add integrationId)
+📝 libraries/nestjs-libraries/src/database/firestore/collections/accounts/account.repository.ts
+📝 libraries/nestjs-libraries/src/database/firestore/collections/accounts/account.service.ts
+📝 apps/backend/src/api/routes/accounts.controller.ts
+📝 libraries/nestjs-libraries/src/database/prisma/matrix/matrix.service.ts
+📝 apps/frontend/src/components/axon/types.ts
+🆕 apps/frontend/src/components/axon/accounts/account-integration-link.tsx
 ```
 
 ---
 
 ## Success Criteria
 
-- [ ] Users can connect any Soul to any Integration
-- [ ] Matrix UI displays all relationships at a glance
-- [ ] Bulk operations work for 50+ mappings
-- [ ] Content creation flow filters channels by selected Soul
-- [ ] API response times < 200ms for matrix operations
-- [ ] 80% test coverage on backend
-- [ ] 70% test coverage on frontend
-- [ ] All E2E tests pass
+### Phase 1 ✅
+- [x] Users can connect any Soul to any Integration
+- [x] Matrix UI displays all relationships at a glance
+- [x] Bulk operations work for 50+ mappings
+- [x] API response times < 200ms for matrix operations
+
+### Phase 2
+- [ ] Users can link Account to Integration
+- [ ] Matrix shows which mappings have linked accounts
+- [ ] Auto-linking works when creating mappings
+- [ ] Platform validation prevents mismatched links
+
+### Phase 3
+- [ ] Posts can be made through configured proxies
+- [ ] Proxy health is monitored
+- [ ] Failed proxy falls back gracefully
+
+### Phase 4
+- [ ] Accounts can be logged in via browser
+- [ ] Actions not available via API can be performed
+- [ ] Sessions are managed securely
 
 ---
 

@@ -159,7 +159,7 @@ export class AccountsController {
   }
 
   @Patch('/:id/integration')
-  @ApiOperation({ summary: 'Link or unlink account to/from a Postiz integration' })
+  @ApiOperation({ summary: 'Link or unlink account to/from a AXON integration' })
   @ApiParam({ name: 'id', description: 'Account ID' })
   @ApiResponse({ status: 200, description: 'Integration link updated', type: AccountResponseDto })
   @ApiResponse({ status: 400, description: 'Platform mismatch or account not linked' })
