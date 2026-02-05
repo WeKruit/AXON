@@ -3,26 +3,13 @@
 import { FC, useState, useCallback } from 'react';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import useSWR from 'swr';
-
-const PLATFORMS = [
-  { id: 'x', label: 'X (Twitter)' },
-  { id: 'linkedin', label: 'LinkedIn' },
-  { id: 'facebook', label: 'Facebook' },
-  { id: 'instagram', label: 'Instagram' },
-  { id: 'threads', label: 'Threads' },
-  { id: 'tiktok', label: 'TikTok' },
-  { id: 'youtube', label: 'YouTube' },
-  { id: 'pinterest', label: 'Pinterest' },
-  { id: 'reddit', label: 'Reddit' },
-  { id: 'discord', label: 'Discord' },
-  { id: 'slack', label: 'Slack' },
-  { id: 'bluesky', label: 'Bluesky' },
-];
+import { PLATFORM_AUTH_LIST, getPlatformConfig } from '../config/platform-auth-config';
 
 interface Credential {
   platform: string;
   clientId: string;
   clientSecretMasked: string;
+  additionalConfig?: Record<string, string>;
 }
 
 interface SoulCredentialsManagerProps {
@@ -32,8 +19,7 @@ interface SoulCredentialsManagerProps {
 export const SoulCredentialsManager: FC<SoulCredentialsManagerProps> = ({ soulId }) => {
   const fetch = useFetch();
   const [editingPlatform, setEditingPlatform] = useState<string | null>(null);
-  const [clientId, setClientId] = useState('');
-  const [clientSecret, setClientSecret] = useState('');
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
   const { data: credentials, mutate } = useSWR<Credential[]>(
@@ -49,27 +35,58 @@ export const SoulCredentialsManager: FC<SoulCredentialsManagerProps> = ({ soulId
 
   const handleEdit = (platformId: string) => {
     const existing = credMap.get(platformId);
+    const config = getPlatformConfig(platformId);
+    const prefilled: Record<string, string> = {};
+    if (existing) {
+      for (const field of config.fields) {
+        if (field.storageKey === 'clientId') {
+          prefilled[field.key] = existing.clientId || '';
+        } else if (field.storageKey === 'additionalConfig' && field.additionalConfigKey && existing.additionalConfig) {
+          prefilled[field.key] = existing.additionalConfig[field.additionalConfigKey] || '';
+        }
+        // Don't pre-fill secrets
+      }
+    }
     setEditingPlatform(platformId);
-    setClientId(existing?.clientId || '');
-    setClientSecret('');
+    setFieldValues(prefilled);
   };
 
   const handleSave = useCallback(async () => {
-    if (!editingPlatform || !clientId || !clientSecret) return;
+    if (!editingPlatform) return;
+    const config = getPlatformConfig(editingPlatform);
+
+    let clientId = '';
+    let clientSecret = '';
+    const additionalConfig: Record<string, string> = {};
+
+    for (const field of config.fields) {
+      const value = fieldValues[field.key] || '';
+      if (field.storageKey === 'clientId') clientId = value;
+      else if (field.storageKey === 'clientSecret') clientSecret = value;
+      else if (field.storageKey === 'additionalConfig' && field.additionalConfigKey) {
+        additionalConfig[field.additionalConfigKey] = value;
+      }
+    }
+
+    if (!clientId || !clientSecret) return;
+
     setSaving(true);
     try {
       await fetch(`/axon/souls/${soulId}/credentials/${editingPlatform}`, {
         method: 'PUT',
-        body: JSON.stringify({ clientId, clientSecret }),
+        body: JSON.stringify({
+          clientId,
+          clientSecret,
+          ...(Object.keys(additionalConfig).length > 0 ? { additionalConfig } : {}),
+        }),
       });
       setEditingPlatform(null);
-      setClientId('');
-      setClientSecret('');
+      setFieldValues({});
       mutate();
     } finally {
       setSaving(false);
     }
-  }, [editingPlatform, clientId, clientSecret, soulId, fetch, mutate]);
+  }, [editingPlatform, fieldValues, soulId, fetch, mutate]);
 
   const handleDelete = useCallback(async (platform: string) => {
     await fetch(`/axon/souls/${soulId}/credentials/${platform}`, {
@@ -87,13 +104,14 @@ export const SoulCredentialsManager: FC<SoulCredentialsManagerProps> = ({ soulId
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {PLATFORMS.map((platform) => {
-          const cred = credMap.get(platform.id);
-          const isEditing = editingPlatform === platform.id;
+        {PLATFORM_AUTH_LIST.map((platform) => {
+          const cred = credMap.get(platform.identifier);
+          const isEditing = editingPlatform === platform.identifier;
+          const config = getPlatformConfig(platform.identifier);
 
           return (
             <div
-              key={platform.id}
+              key={platform.identifier}
               className="border border-newBgLineColor rounded-lg p-3 space-y-2"
             >
               <div className="flex items-center justify-between">
@@ -111,30 +129,28 @@ export const SoulCredentialsManager: FC<SoulCredentialsManagerProps> = ({ soulId
 
               {isEditing ? (
                 <div className="space-y-2">
-                  <input
-                    type="text"
-                    placeholder="Client ID / API Key"
-                    value={clientId}
-                    onChange={(e) => setClientId(e.target.value)}
-                    className="w-full px-2 py-1.5 text-sm bg-newBgColor border border-newBgLineColor rounded"
-                  />
-                  <input
-                    type="password"
-                    placeholder="Client Secret / API Secret"
-                    value={clientSecret}
-                    onChange={(e) => setClientSecret(e.target.value)}
-                    className="w-full px-2 py-1.5 text-sm bg-newBgColor border border-newBgLineColor rounded"
-                  />
+                  {config.fields.map((field) => (
+                    <input
+                      key={field.key}
+                      type={field.type}
+                      placeholder={field.placeholder}
+                      value={fieldValues[field.key] || ''}
+                      onChange={(e) =>
+                        setFieldValues((prev) => ({ ...prev, [field.key]: e.target.value }))
+                      }
+                      className="w-full px-2 py-1.5 text-sm bg-newBgColor border border-newBgLineColor rounded"
+                    />
+                  ))}
                   <div className="flex gap-2">
                     <button
                       onClick={handleSave}
-                      disabled={saving || !clientId || !clientSecret}
+                      disabled={saving}
                       className="px-3 py-1 text-xs bg-btnPrimary text-white rounded disabled:opacity-50"
                     >
                       {saving ? 'Saving...' : 'Save'}
                     </button>
                     <button
-                      onClick={() => setEditingPlatform(null)}
+                      onClick={() => { setEditingPlatform(null); setFieldValues({}); }}
                       className="px-3 py-1 text-xs bg-newBgLineColor rounded"
                     >
                       Cancel
@@ -149,14 +165,14 @@ export const SoulCredentialsManager: FC<SoulCredentialsManagerProps> = ({ soulId
                     </span>
                   )}
                   <button
-                    onClick={() => handleEdit(platform.id)}
+                    onClick={() => handleEdit(platform.identifier)}
                     className="px-2 py-1 text-xs bg-newBgLineColor rounded hover:bg-newBgLineColor/80"
                   >
                     {cred ? 'Edit' : 'Configure'}
                   </button>
                   {cred && (
                     <button
-                      onClick={() => handleDelete(platform.id)}
+                      onClick={() => handleDelete(platform.identifier)}
                       className="px-2 py-1 text-xs text-red-400 bg-red-500/10 rounded hover:bg-red-500/20"
                     >
                       Remove

@@ -1,160 +1,390 @@
-# PRD: M4 - Soul-Channel Matrix
+# PRD: M4 - Soul-Channel-Account Management System
 
-**Version:** 1.0
+**Version:** 2.0
 **Date:** 2026-01-26
-**Status:** Draft
+**Status:** In Progress
 **Owner:** WeCrew Team
 
 ---
 
 ## 1. Executive Summary
 
-The Soul-Channel Matrix is a many-to-many relationship system that connects AXON Souls (brand identities) with Postiz Integrations (connected social media channels). This enables flexible content distribution where any Soul can post to any assigned channel, with persona-driven content generation.
+The Soul-Channel-Account Management System is a comprehensive identity and channel management platform that enables users to manage multiple brand identities (Souls), each with their own social media accounts (Accounts), connected channels (Integrations), proxy/IP configurations, and credentials.
 
 ### 1.1 Problem Statement
 
-Currently, AXON Souls/Accounts and Postiz Integrations exist as separate, disconnected systems:
-- Users cannot associate their brand identities (Souls) with connected channels
-- Content creation doesn't leverage persona/brand voice
-- No way to manage which brands can post to which channels
-- No unified view of brand → channel relationships
+Users need to manage multiple brand identities across multiple social media platforms with:
+- Multiple accounts per identity (one per platform)
+- Secure credential storage for each account
+- IP/Proxy management for account safety
+- OAuth-connected channels for publishing
+- Clear relationships between accounts and channels
 
 ### 1.2 Solution Overview
 
-Create a Matrix system that:
-- Links Souls to Integrations via a many-to-many mapping
-- Provides a visual matrix UI for managing relationships
-- Integrates with content creation to filter channels by Soul
-- Enables persona-driven content generation per Soul
+A hierarchical management system:
+
+```
+User (Organization)
+  └── Soul (Identity Container)
+        ├── Account (Platform Credentials)
+        │     ├── Credentials (username/password/tokens)
+        │     ├── Proxy Assignment (IP management)
+        │     └── Integration Link (OAuth channel)
+        └── Channel Mappings (via Matrix)
+              └── Integration (OAuth-connected channel)
+```
 
 ---
 
-## 2. Goals & Success Metrics
+## 2. Architecture Overview
 
-### 2.1 Goals
+### 2.1 Data Model
 
-| Goal | Description |
-|------|-------------|
-| G1 | Enable many-to-many Soul ↔ Integration mapping |
-| G2 | Provide intuitive matrix UI for relationship management |
-| G3 | Filter content creation by Soul's assigned channels |
-| G4 | Support bulk operations (assign/unassign multiple) |
-| G5 | Maintain backward compatibility with existing Postiz flows |
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                              FIRESTORE                                   │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  Soul ─────────────────────────┐                                        │
+│  ├── id                        │ 1:N                                    │
+│  ├── organizationId            │                                        │
+│  ├── name                      ▼                                        │
+│  ├── description        Account                                         │
+│  ├── status             ├── id                                          │
+│  ├── personaId          ├── soulId ◄───────────────┘                    │
+│  ├── proxyId            ├── platform (twitter, instagram, etc.)         │
+│  ├── accountIds[] ─────►├── handle (@username)                          │
+│  └── metadata           ├── displayName                                 │
+│                         ├── status (active/inactive/suspended)          │
+│                         ├── credentials ──────────┐                     │
+│  Persona                │     ├── username        │ ENCRYPTED           │
+│  ├── id                 │     ├── password        │                     │
+│  ├── name               │     ├── accessToken     │                     │
+│  ├── tone               │     ├── refreshToken    │                     │
+│  ├── style              │     ├── apiKey          │                     │
+│  └── systemPrompt       │     ├── apiSecret       │                     │
+│                         │     ├── twoFactorSecret │                     │
+│  Proxy                  │     └── backupCodes[]   ◄────────────────────┘│
+│  ├── id                 ├── proxyId ─────────────────►Proxy              │
+│  ├── name               ├── integrationId ───────────────┐ (NEW)        │
+│  ├── host:port          ├── metrics                      │              │
+│  ├── credentials        ├── warmingConfig                │              │
+│  ├── type               └── lastActivityAt               │              │
+│  ├── status                                              │              │
+│  └── assignedAccountIds[]                                │              │
+│                                                          │              │
+└──────────────────────────────────────────────────────────┼──────────────┘
+                                                           │
+┌──────────────────────────────────────────────────────────┼──────────────┐
+│                           POSTGRESQL                      │              │
+├──────────────────────────────────────────────────────────┼──────────────┤
+│                                                          │              │
+│  Integration (Channel)◄──────────────────────────────────┘              │
+│  ├── id                                                                 │
+│  ├── organizationId                                                     │
+│  ├── internalId (platform user ID)                                      │
+│  ├── providerIdentifier (twitter, instagram, etc.)                      │
+│  ├── name                                                               │
+│  ├── token (OAuth access token)                                         │
+│  ├── refreshToken                                                       │
+│  ├── tokenExpiration                                                    │
+│  ├── disabled                                                           │
+│  └── soulMappings[] ───────────────────────────────┐                    │
+│                                                    │                    │
+│  SoulIntegrationMapping                            │                    │
+│  ├── id                                            │                    │
+│  ├── soulId (Firestore reference)                  │                    │
+│  ├── integrationId ◄───────────────────────────────┘                    │
+│  ├── accountId (Firestore reference) ─── NEW                            │
+│  ├── organizationId                                                     │
+│  ├── isPrimary                                                          │
+│  ├── priority                                                           │
+│  ├── notes                                                              │
+│  └── createdAt/updatedAt                                                │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
 
-### 2.2 Success Metrics
+### 2.2 Entity Relationships
 
-| Metric | Target |
-|--------|--------|
-| Matrix load time | < 500ms |
-| Mapping operation latency | < 200ms |
-| User can create Soul→Channel mapping | < 30 seconds |
-| Zero breaking changes to existing posts |
+| From | To | Relationship | Storage |
+|------|-----|--------------|---------|
+| Organization | Soul | 1:N | Firestore |
+| Soul | Account | 1:N | Firestore |
+| Soul | Integration | M:N | PostgreSQL (via SoulIntegrationMapping) |
+| Account | Proxy | N:1 | Firestore (proxyId reference) |
+| Account | Integration | 1:1 | Firestore (integrationId reference) **NEW** |
+| Proxy | Account | 1:N | Firestore (assignedAccountIds[]) |
+
+### 2.3 Entity Purposes
+
+| Entity | Purpose | Storage | Key Fields |
+|--------|---------|---------|------------|
+| **Soul** | Identity container (brand/person) | Firestore | name, personaId, accountIds[] |
+| **Account** | Platform credentials & profile | Firestore | platform, handle, credentials, proxyId, integrationId |
+| **Persona** | AI personality for content | Firestore | tone, style, systemPrompt |
+| **Proxy** | IP management for account safety | Firestore | host, port, credentials, type |
+| **Integration** | OAuth-connected publishing channel | PostgreSQL | token, refreshToken, providerIdentifier |
+| **SoulIntegrationMapping** | Soul ↔ Channel relationship | PostgreSQL | soulId, integrationId, accountId, isPrimary |
 
 ---
 
-## 3. User Stories
+## 3. User Flows
 
-### 3.1 Core User Stories
+### 3.1 Complete Setup Flow
 
-| ID | As a... | I want to... | So that... |
-|----|---------|--------------|------------|
-| US1 | Brand Manager | See all my Souls and Channels in a matrix view | I can understand which brands post where |
-| US2 | Brand Manager | Click a cell to toggle Soul↔Channel connection | I can quickly configure relationships |
-| US3 | Content Creator | Filter channels by Soul when creating content | I only see relevant channels for my brand |
-| US4 | Content Creator | See the Soul's persona when drafting | I can match the brand voice |
-| US5 | Admin | Bulk assign a Soul to multiple channels | I can quickly set up a new brand |
-| US6 | Admin | Bulk assign multiple Souls to one channel | I can share a channel across brands |
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           SETUP FLOW                                     │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  Step 1: Create Soul (Identity)                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │  Name: "TechBrand"                                               │    │
+│  │  Description: "Our B2B tech company identity"                    │    │
+│  │  Persona: [Select or Create]                                     │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                               │                                          │
+│                               ▼                                          │
+│  Step 2: Configure Proxy (Optional but Recommended)                     │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │  Name: "US-Residential-1"                                        │    │
+│  │  Type: Residential                                               │    │
+│  │  Provider: IPRoyal                                               │    │
+│  │  Host: proxy.iproyal.com:12345                                   │    │
+│  │  Credentials: [username:password]                                │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                               │                                          │
+│                               ▼                                          │
+│  Step 3: Create Account (Platform Credentials)                          │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │  Soul: TechBrand                                                 │    │
+│  │  Platform: Twitter/X                                             │    │
+│  │  Handle: @techbrand_official                                     │    │
+│  │  Credentials:                                                    │    │
+│  │    └── Username: techbrand_official                              │    │
+│  │    └── Password: ************ (encrypted)                        │    │
+│  │    └── 2FA Secret: ************ (encrypted)                      │    │
+│  │  Proxy: US-Residential-1                                         │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                               │                                          │
+│                               ▼                                          │
+│  Step 4: Connect Channel (OAuth)                                        │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │  [Connect Twitter/X Account]                                     │    │
+│  │         │                                                        │    │
+│  │         ▼                                                        │    │
+│  │  OAuth Popup → Authorize → Token Stored                          │    │
+│  │         │                                                        │    │
+│  │         ▼                                                        │    │
+│  │  Integration Created: @techbrand_official (Twitter)              │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                               │                                          │
+│                               ▼                                          │
+│  Step 5: Link Account to Integration                                    │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │  Account: @techbrand_official                                    │    │
+│  │         │                                                        │    │
+│  │         ▼ (match by platform + handle)                           │    │
+│  │  Integration: @techbrand_official (Twitter)                      │    │
+│  │         │                                                        │    │
+│  │         ▼                                                        │    │
+│  │  account.integrationId = integration.id                          │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                               │                                          │
+│                               ▼                                          │
+│  Step 6: Map Soul to Channel (Matrix)                                   │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │  Soul: TechBrand                                                 │    │
+│  │         │                                                        │    │
+│  │         ▼                                                        │    │
+│  │  SoulIntegrationMapping:                                         │    │
+│  │    - soulId: [TechBrand ID]                                      │    │
+│  │    - integrationId: [Twitter Integration ID]                     │    │
+│  │    - accountId: [Account ID] ← NEW                               │    │
+│  │    - isPrimary: true                                             │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
 
-### 3.2 Edge Cases
+### 3.2 Connection Methods
 
-| ID | Scenario | Expected Behavior |
-|----|----------|-------------------|
-| EC1 | Integration deleted in Postiz | Remove from all Soul mappings automatically |
-| EC2 | Soul deleted in AXON | Remove all its channel mappings |
-| EC3 | Channel token expires | Show warning in matrix, still show mapping |
-| EC4 | No Souls exist | Show empty state with "Create Soul" CTA |
-| EC5 | No Integrations exist | Show empty state with "Connect Channel" CTA |
+| Method | Description | Use Case | Implementation |
+|--------|-------------|----------|----------------|
+| **OAuth** | Standard OAuth 2.0 flow | Publishing posts via API | ✅ Implemented (Postiz) |
+| **Credentials** | Username/password/2FA | Account management, backup | ✅ Storage ready, login pending |
+| **API Keys** | Direct API access | Some platforms (Farcaster, etc.) | ✅ Storage ready |
+| **Browser Automation** | Puppeteer/Playwright | Non-API actions | 🔜 Future phase |
+
+### 3.3 How Posting Works (Current System)
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         POSTING FLOW                                     │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  1. User Creates Post                                                   │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │  Select Soul: TechBrand                                          │    │
+│  │  Select Channel: @techbrand_official (Twitter)                   │    │
+│  │  Content: "Check out our new product..."                         │    │
+│  │  Schedule: 2026-01-27 09:00 AM                                   │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                               │                                          │
+│                               ▼                                          │
+│  2. Post Saved to Database                                              │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │  Post {                                                          │    │
+│  │    integrationId: "int_xyz",                                     │    │
+│  │    publishDate: "2026-01-27T09:00:00Z",                          │    │
+│  │    content: "Check out...",                                      │    │
+│  │    state: "QUEUE"                                                │    │
+│  │  }                                                               │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                               │                                          │
+│                               ▼                                          │
+│  3. Temporal Workflow Started                                           │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │  PostWorkflow:                                                   │    │
+│  │    - Wait until publishDate                                      │    │
+│  │    - Fetch Integration (with OAuth token)                        │    │
+│  │    - Call postSocial() activity                                  │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                               │                                          │
+│                               ▼                                          │
+│  4. Post Published via API                                              │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │  XProvider.post():                                               │    │
+│  │    - Use OAuth token from Integration                            │    │
+│  │    - Call Twitter API                                            │    │
+│  │    - Return post URL                                             │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                                                                          │
+│  ⚠️  NOTE: Currently NO proxy is used for posting                       │
+│  ⚠️  NOTE: Currently NO Account credentials used (OAuth only)           │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 4. Functional Requirements
+## 4. Implementation Status
 
-### 4.1 Matrix Data Model
+### 4.1 Completed (Phase 1) ✅
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    SOUL-CHANNEL MATRIX                          │
-│                                                                 │
-│                     Integrations (Columns)                      │
-│              ┌─────────┬─────────┬─────────┬─────────┐         │
-│              │ Twitter │ Insta   │ LinkedIn│ TikTok  │         │
-│              │ @brand1 │ @brand1 │ @corp   │ @viral  │         │
-│  ┌───────────┼─────────┼─────────┼─────────┼─────────┤         │
-│  │ Soul A    │   ●     │   ●     │   ○     │   ○     │         │
-│  │ "Startup" │ active  │ active  │         │         │         │
-│  ├───────────┼─────────┼─────────┼─────────┼─────────┤         │
-│  │ Soul B    │   ○     │   ○     │   ●     │   ○     │         │
-│  │ "Corp"    │         │         │ active  │         │         │
-│  ├───────────┼─────────┼─────────┼─────────┼─────────┤         │
-│  │ Soul C    │   ●     │   ●     │   ○     │   ●     │         │
-│  │ "Viral"   │ active  │ active  │         │ active  │         │
-│  └───────────┴─────────┴─────────┴─────────┴─────────┘         │
-│                                                                 │
-│  ● = Mapped (Soul can post to this channel)                    │
-│  ○ = Not mapped                                                │
-└─────────────────────────────────────────────────────────────────┘
-```
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Soul CRUD | ✅ Complete | Firestore |
+| Account CRUD | ✅ Complete | Firestore with encrypted credentials |
+| Persona CRUD | ✅ Complete | Firestore |
+| Proxy CRUD | ✅ Complete | Firestore |
+| Soul-Channel Matrix | ✅ Complete | PostgreSQL mapping table |
+| Matrix UI | ✅ Complete | Grid view, bulk operations |
+| Credentials Storage | ✅ Complete | Encrypted in Account entity |
+| Proxy Assignment | ✅ Complete | Account.proxyId |
 
-### 4.2 Database Schema
+### 4.2 In Progress (Phase 2) 🔄
 
-#### PostgreSQL (New Table)
+| Feature | Status | Priority |
+|---------|--------|----------|
+| Account ↔ Integration Link | 🔄 Needed | High |
+| Add `accountId` to SoulIntegrationMapping | 🔄 Needed | High |
+| Auto-link Account to Integration on OAuth | 🔄 Needed | Medium |
 
-```sql
--- Soul-Integration Mapping Table
-CREATE TABLE soul_integration_mapping (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  soul_id         VARCHAR(255) NOT NULL,        -- Firestore Soul ID
-  integration_id  VARCHAR(255) NOT NULL,        -- PostgreSQL Integration ID
-  organization_id VARCHAR(255) NOT NULL,        -- For multi-tenancy
+### 4.3 Future (Phase 3) 🔜
 
-  -- Mapping metadata
-  is_primary      BOOLEAN DEFAULT false,        -- Primary channel for this Soul
-  priority        INTEGER DEFAULT 0,            -- Ordering preference
+| Feature | Status | Priority |
+|---------|--------|----------|
+| Proxy-based posting | 🔜 Future | Medium |
+| Browser automation for login | 🔜 Future | Low |
+| Credentials-based actions | 🔜 Future | Low |
+| Account warming workflows | 🔜 Future | Low |
 
-  -- Audit fields
-  created_at      TIMESTAMP DEFAULT NOW(),
-  updated_at      TIMESTAMP DEFAULT NOW(),
-  created_by      VARCHAR(255),
+---
 
-  -- Constraints
-  UNIQUE(soul_id, integration_id),
-  FOREIGN KEY (integration_id) REFERENCES "Integration"(id) ON DELETE CASCADE,
-  FOREIGN KEY (organization_id) REFERENCES "Organization"(id)
-);
+## 5. API Endpoints
 
--- Index for fast lookups
-CREATE INDEX idx_mapping_soul ON soul_integration_mapping(soul_id);
-CREATE INDEX idx_mapping_integration ON soul_integration_mapping(integration_id);
-CREATE INDEX idx_mapping_org ON soul_integration_mapping(organization_id);
-```
+### 5.1 Soul Endpoints
 
-#### Prisma Schema Addition
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/axon/souls` | Create soul |
+| GET | `/axon/souls` | List souls (paginated) |
+| GET | `/axon/souls/:id` | Get soul by ID |
+| PUT | `/axon/souls/:id` | Update soul |
+| DELETE | `/axon/souls/:id` | Delete soul |
 
+### 5.2 Account Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/axon/accounts` | Create account |
+| GET | `/axon/accounts` | List accounts |
+| GET | `/axon/accounts?soulId=xxx` | Get accounts by soul |
+| GET | `/axon/accounts/:id` | Get account by ID |
+| PUT | `/axon/accounts/:id` | Update account |
+| DELETE | `/axon/accounts/:id` | Delete account |
+| PATCH | `/axon/accounts/:id/proxy` | Assign/unassign proxy |
+| PATCH | `/axon/accounts/:id/integration` | Link to integration **NEW** |
+
+### 5.3 Proxy Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/axon/proxies` | Create proxy |
+| GET | `/axon/proxies` | List proxies |
+| GET | `/axon/proxies/:id` | Get proxy by ID |
+| PUT | `/axon/proxies/:id` | Update proxy |
+| DELETE | `/axon/proxies/:id` | Delete proxy |
+| POST | `/axon/proxies/:id/test` | Test proxy connectivity |
+
+### 5.4 Matrix Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/axon/matrix` | Get full matrix |
+| GET | `/axon/matrix/souls/:soulId/integrations` | Get integrations for soul |
+| GET | `/axon/matrix/integrations/:integrationId/souls` | Get souls for integration |
+| POST | `/axon/matrix/mappings` | Create mapping |
+| POST | `/axon/matrix/mappings/toggle` | Toggle mapping |
+| POST | `/axon/matrix/mappings/bulk` | Bulk operations |
+| PATCH | `/axon/matrix/mappings/:id` | Update mapping |
+| DELETE | `/axon/matrix/mappings/:id` | Delete mapping |
+| POST | `/axon/matrix/mappings/:id/primary` | Set as primary |
+
+### 5.5 Integration Endpoints (Existing Postiz)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/integrations/social/:provider` | Get OAuth URL |
+| POST | `/integrations/social/:provider/connect` | Complete OAuth |
+| GET | `/integrations/list` | List connected channels |
+| DELETE | `/integrations/:id` | Disconnect channel |
+
+---
+
+## 6. Database Schema Changes
+
+### 6.1 Current Schema (Complete)
+
+**PostgreSQL - SoulIntegrationMapping:**
 ```prisma
 model SoulIntegrationMapping {
-  id              String      @id @default(cuid())
-  soulId          String      // Firestore document ID
-  integrationId   String
-  organizationId  String
-  isPrimary       Boolean     @default(false)
-  priority        Int         @default(0)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  createdBy       String?
+  id             String       @id @default(cuid())
+  soulId         String       // Firestore Soul ID
+  integrationId  String
+  organizationId String
+  isPrimary      Boolean      @default(false)
+  priority       Int          @default(0)
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  createdBy      String?
 
-  // Relations
-  integration     Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
-  organization    Organization @relation(fields: [organizationId], references: [id])
+  integration    Integration  @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
   @@unique([soulId, integrationId])
   @@index([soulId])
@@ -164,437 +394,163 @@ model SoulIntegrationMapping {
 }
 ```
 
-### 4.3 API Endpoints
+### 6.2 Proposed Changes (Phase 2)
 
-#### Matrix Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/matrix` | Get full matrix (Souls × Integrations) |
-| GET | `/api/v1/matrix/souls/:soulId/integrations` | Get integrations for a Soul |
-| GET | `/api/v1/matrix/integrations/:integrationId/souls` | Get Souls for an Integration |
-| POST | `/api/v1/matrix/mappings` | Create a mapping |
-| DELETE | `/api/v1/matrix/mappings/:id` | Delete a mapping |
-| POST | `/api/v1/matrix/mappings/bulk` | Bulk create/delete mappings |
-| PATCH | `/api/v1/matrix/mappings/:id` | Update mapping (isPrimary, priority) |
-
-#### Request/Response Examples
-
-**GET /api/v1/matrix**
-```json
-{
-  "souls": [
-    {
-      "id": "soul_abc123",
-      "name": "Startup Brand",
-      "persona": { "id": "persona_1", "name": "Tech Enthusiast" },
-      "integrationIds": ["int_1", "int_2"]
-    }
-  ],
-  "integrations": [
-    {
-      "id": "int_1",
-      "name": "@startup_official",
-      "platform": "twitter",
-      "picture": "https://...",
-      "soulIds": ["soul_abc123", "soul_xyz789"]
-    }
-  ],
-  "mappings": [
-    {
-      "id": "map_1",
-      "soulId": "soul_abc123",
-      "integrationId": "int_1",
-      "isPrimary": true,
-      "priority": 1
-    }
-  ]
+**Add `accountId` to SoulIntegrationMapping:**
+```prisma
+model SoulIntegrationMapping {
+  // ... existing fields ...
+  
+  accountId      String?      // NEW: Firestore Account ID
+  
+  @@index([accountId])        // NEW: Index for account lookups
 }
 ```
 
-**POST /api/v1/matrix/mappings/bulk**
-```json
-{
-  "operations": [
-    { "action": "create", "soulId": "soul_1", "integrationId": "int_1" },
-    { "action": "create", "soulId": "soul_1", "integrationId": "int_2" },
-    { "action": "delete", "soulId": "soul_2", "integrationId": "int_3" }
-  ]
+**Add `integrationId` to Account (Firestore):**
+```typescript
+interface Account {
+  // ... existing fields ...
+  
+  integrationId?: string;  // NEW: Link to PostgreSQL Integration
 }
 ```
 
-### 4.4 Frontend Components
+---
 
-#### Matrix View Component
+## 7. Frontend Components
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│  Soul-Channel Matrix                              [+ Add Soul]   │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  Filter: [All Platforms ▼] [Search souls...]  [Bulk Edit]       │
-│                                                                  │
-│  ┌────────────┬──────────┬──────────┬──────────┬──────────┐     │
-│  │            │ 🐦       │ 📸       │ 💼       │ 🎵       │     │
-│  │ SOULS      │ Twitter  │ Instagram│ LinkedIn │ TikTok   │     │
-│  │            │ @brand1  │ @brand1  │ @company │ @viral   │     │
-│  ├────────────┼──────────┼──────────┼──────────┼──────────┤     │
-│  │ 🟣 Startup │   [✓]    │   [✓]    │   [ ]    │   [ ]    │     │
-│  │   Brand    │  ⭐ pri  │          │          │          │     │
-│  ├────────────┼──────────┼──────────┼──────────┼──────────┤     │
-│  │ 🔵 Corp    │   [ ]    │   [ ]    │   [✓]    │   [ ]    │     │
-│  │   Identity │          │          │  ⭐ pri  │          │     │
-│  ├────────────┼──────────┼──────────┼──────────┼──────────┤     │
-│  │ 🟢 Viral   │   [✓]    │   [✓]    │   [ ]    │   [✓]    │     │
-│  │   Content  │          │          │          │  ⭐ pri  │     │
-│  └────────────┴──────────┴──────────┴──────────┴──────────┘     │
-│                                                                  │
-│  Legend: [✓] = Mapped  ⭐ = Primary channel for this Soul       │
-│                                                                  │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-#### Integration with Content Creation
+### 7.1 Matrix Page
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│  Create Post                                                     │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  Step 1: Select Brand Voice                                      │
-│  ┌────────────────────────────────────────────────────────────┐ │
-│  │  [🟣 Startup Brand ▼]                                      │ │
-│  │                                                            │ │
-│  │  Persona: "Tech Enthusiast"                                │ │
-│  │  Tone: Professional, Innovative                            │ │
-│  │  Style: Data-driven, Thought leadership                    │ │
-│  └────────────────────────────────────────────────────────────┘ │
-│                                                                  │
-│  Step 2: Select Channels (filtered by Soul)                      │
-│  ┌────────────────────────────────────────────────────────────┐ │
-│  │  Available for "Startup Brand":                            │ │
-│  │                                                            │ │
-│  │  [✓] 🐦 @startup_official (Twitter)  ⭐ Primary           │ │
-│  │  [✓] 📸 @startup_official (Instagram)                     │ │
-│  │  [ ] 💼 @company (LinkedIn) - Not mapped                  │ │
-│  └────────────────────────────────────────────────────────────┘ │
-│                                                                  │
-│  Step 3: Compose Content                                         │
-│  ┌────────────────────────────────────────────────────────────┐ │
-│  │  [AI Assist with Persona] [Generate Draft]                 │ │
-│  │                                                            │ │
-│  │  ________________________________________________         │ │
-│  │  |                                                |         │ │
-│  │  | Your content here...                           |         │ │
-│  │  |________________________________________________|         │ │
-│  └────────────────────────────────────────────────────────────┘ │
-│                                                                  │
-│                                    [Save Draft] [Schedule Post]  │
-└──────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│  Soul-Channel Matrix                                      [Bulk Edit]    │
+├──────────────────────────────────────────────────────────────────────────┤
+│  Filters: [All Platforms ▼] [Search souls...] [Connected Only ☐]        │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│              │ 🐦 Twitter  │ 📸 Instagram │ 💼 LinkedIn │ 🎵 TikTok   │
+│              │ @brand1     │ @brand1      │ @company    │ @viral      │
+│  ────────────┼─────────────┼──────────────┼─────────────┼─────────────│
+│  🟣 TechBrand│    [✓]⭐    │     [✓]      │     [ ]     │     [ ]     │
+│              │   linked    │    linked    │             │             │
+│  ────────────┼─────────────┼──────────────┼─────────────┼─────────────│
+│  🔵 Personal │    [ ]      │     [✓]⭐    │     [✓]     │     [ ]     │
+│              │             │    linked    │   linked    │             │
+│  ────────────┼─────────────┼──────────────┼─────────────┼─────────────│
+│  🟢 Viral    │    [✓]      │     [✓]      │     [ ]     │     [✓]⭐   │
+│              │   linked    │    linked    │             │   linked    │
+│                                                                          │
+│  Legend: [✓] = Mapped  ⭐ = Primary  "linked" = Account connected       │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+### 7.2 Account Management Page
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│  Accounts                                          [+ Create Account]    │
+├──────────────────────────────────────────────────────────────────────────┤
+│  Filters: [All Souls ▼] [All Platforms ▼] [Status ▼]                    │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────────┐ │
+│  │ 🐦 @techbrand_official                                              │ │
+│  │ Soul: TechBrand  │  Platform: Twitter  │  Status: Active           │ │
+│  │                                                                     │ │
+│  │ Credentials: ✓ Stored    Proxy: US-Residential-1                   │ │
+│  │ Channel: ✓ Connected (OAuth)                                       │ │
+│  │                                                                     │ │
+│  │ [Edit] [Connect Channel] [Test Proxy] [View Details]               │ │
+│  └────────────────────────────────────────────────────────────────────┘ │
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────────┐ │
+│  │ 📸 @techbrand_ig                                                   │ │
+│  │ Soul: TechBrand  │  Platform: Instagram  │  Status: Warming        │ │
+│  │                                                                     │ │
+│  │ Credentials: ✓ Stored    Proxy: EU-Residential-2                   │ │
+│  │ Channel: ⚠ Not Connected                                           │ │
+│  │                                                                     │ │
+│  │ [Edit] [Connect Channel] [Test Proxy] [View Details]               │ │
+│  └────────────────────────────────────────────────────────────────────┘ │
+│                                                                          │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 5. Technical Architecture
+## 8. Security Considerations
 
-### 5.1 System Architecture
+### 8.1 Credential Encryption
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         FRONTEND (Next.js)                          │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐     │
-│  │   Matrix View   │  │  Content Create │  │   Soul Manager  │     │
-│  │   Component     │  │   (Enhanced)    │  │   (Existing)    │     │
-│  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘     │
-│           │                    │                    │               │
-│           └────────────────────┼────────────────────┘               │
-│                                │                                    │
-│                    ┌───────────▼───────────┐                       │
-│                    │   useMatrix() Hook    │                       │
-│                    │   useSoulChannels()   │                       │
-│                    └───────────┬───────────┘                       │
-└────────────────────────────────┼────────────────────────────────────┘
-                                 │
-                    ┌────────────▼────────────┐
-                    │      API Gateway        │
-                    │   /api/v1/matrix/*      │
-                    └────────────┬────────────┘
-                                 │
-┌────────────────────────────────┼────────────────────────────────────┐
-│                         BACKEND (NestJS)                            │
-│                                │                                    │
-│  ┌─────────────────────────────▼─────────────────────────────┐     │
-│  │                   MatrixController                         │     │
-│  │  - GET /matrix                                            │     │
-│  │  - POST/DELETE /matrix/mappings                           │     │
-│  │  - POST /matrix/mappings/bulk                             │     │
-│  └─────────────────────────────┬─────────────────────────────┘     │
-│                                │                                    │
-│  ┌─────────────────────────────▼─────────────────────────────┐     │
-│  │                    MatrixService                           │     │
-│  │  - getMatrix()                                            │     │
-│  │  - createMapping()                                        │     │
-│  │  - deleteMapping()                                        │     │
-│  │  - bulkOperations()                                       │     │
-│  └───────────────┬─────────────────────────┬─────────────────┘     │
-│                  │                         │                        │
-│  ┌───────────────▼───────────┐ ┌───────────▼───────────────┐       │
-│  │  SoulIntegrationMapping   │ │     SoulService           │       │
-│  │  Repository (Prisma)      │ │     (Firestore)           │       │
-│  └───────────────┬───────────┘ └───────────┬───────────────┘       │
-│                  │                         │                        │
-└──────────────────┼─────────────────────────┼────────────────────────┘
-                   │                         │
-         ┌─────────▼─────────┐     ┌─────────▼─────────┐
-         │    PostgreSQL     │     │     Firestore     │
-         │                   │     │                   │
-         │ - Integration     │     │ - Soul            │
-         │ - Mapping Table   │     │ - Persona         │
-         │ - Post            │     │ - Account         │
-         └───────────────────┘     └───────────────────┘
-```
-
-### 5.2 Data Flow
-
-#### Creating a Mapping
-
-```
-User clicks cell in Matrix
-         │
-         ▼
-┌─────────────────────┐
-│ Frontend dispatches │
-│ createMapping()     │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│ POST /matrix/mapping│
-│ { soulId, intId }   │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│ MatrixService       │
-│ validates:          │
-│ - Soul exists (FS)  │
-│ - Int exists (PG)   │
-│ - Same org          │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│ Create mapping in   │
-│ PostgreSQL          │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│ Return updated      │
-│ matrix state        │
-└─────────────────────┘
-```
-
-#### Content Creation with Soul Filter
-
-```
-User selects Soul in Create Post
-         │
-         ▼
-┌─────────────────────┐
-│ Fetch integrations  │
-│ for selected Soul   │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│ GET /matrix/souls/  │
-│ {soulId}/integrations│
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│ Return filtered     │
-│ integrations list   │
-│ with mapping status │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│ UI shows only       │
-│ mapped channels     │
-│ (others greyed out) │
-└─────────────────────┘
-```
-
-### 5.3 File Structure
-
-```
-Backend:
-├── apps/backend/src/api/routes/
-│   └── matrix.controller.ts              # NEW
-├── libraries/nestjs-libraries/src/
-│   ├── database/prisma/
-│   │   ├── schema.prisma                 # MODIFY: Add mapping model
-│   │   └── matrix/
-│   │       ├── matrix.service.ts         # NEW
-│   │       └── matrix.repository.ts      # NEW
-│   └── dtos/
-│       └── matrix/
-│           ├── matrix.dto.ts             # NEW
-│           └── mapping.dto.ts            # NEW
-
-Frontend:
-├── apps/frontend/src/
-│   ├── app/(app)/(site)/
-│   │   └── axon/
-│   │       └── matrix/
-│   │           └── page.tsx              # NEW: Matrix page
-│   ├── components/axon/
-│   │   └── matrix/
-│   │       ├── matrix-view.tsx           # NEW: Main matrix component
-│   │       ├── matrix-cell.tsx           # NEW: Individual cell
-│   │       ├── matrix-header.tsx         # NEW: Column headers
-│   │       ├── matrix-row.tsx            # NEW: Row with Soul info
-│   │       ├── bulk-edit-modal.tsx       # NEW: Bulk operations
-│   │       └── matrix-filters.tsx        # NEW: Filter controls
-│   ├── hooks/
-│   │   └── use-matrix.ts                 # NEW: Matrix data hook
-│   └── components/launches/
-│       └── add.edit.modal.tsx            # MODIFY: Add Soul selector
-```
-
----
-
-## 6. Non-Functional Requirements
-
-### 6.1 Performance
-
-| Requirement | Target |
-|-------------|--------|
-| Matrix load (50 souls × 20 integrations) | < 500ms |
-| Single mapping operation | < 200ms |
-| Bulk operation (100 mappings) | < 2s |
-| Matrix re-render on change | < 100ms |
-
-### 6.2 Scalability
-
-| Limit | Value |
-|-------|-------|
-| Max Souls per organization | 1000 |
-| Max Integrations per organization | 100 |
-| Max mappings per organization | 10,000 |
-
-### 6.3 Security
-
-- All endpoints require authentication
-- Organization-level isolation (users can only see their org's data)
-- Audit logging for all mapping changes
-- Rate limiting: 100 requests/minute per user
-
----
-
-## 7. Migration & Rollout
-
-### 7.1 Migration Steps
-
-1. **Database Migration**
-   - Add `soul_integration_mapping` table
-   - No existing data migration needed (new feature)
-
-2. **Backend Deployment**
-   - Deploy new Matrix endpoints
-   - No breaking changes to existing endpoints
-
-3. **Frontend Deployment**
-   - Add Matrix page to navigation
-   - Enhance content creation with Soul selector
-   - Existing flows remain unchanged
-
-### 7.2 Feature Flags
+All sensitive credentials are encrypted at rest:
 
 ```typescript
-const FEATURE_FLAGS = {
-  SOUL_CHANNEL_MATRIX: true,      // Enable matrix view
-  SOUL_FILTER_IN_POSTS: true,     // Enable Soul filter in post creation
-  BULK_MATRIX_OPERATIONS: true,   // Enable bulk edit
-};
+// Encrypted fields in Account.credentials:
+- password
+- accessToken
+- refreshToken
+- apiKey
+- apiSecret
+- twoFactorSecret
+- backupCodes[]
+
+// Encryption method:
+- AES-256-GCM encryption
+- Keys stored in environment variables
+- Decrypted only when needed
 ```
 
-### 7.3 Rollback Plan
+### 8.2 Proxy Security
 
-1. Disable feature flags
-2. Matrix page becomes inaccessible
-3. Post creation reverts to original flow
-4. Mapping data preserved for re-enable
+```typescript
+// Proxy credentials are also encrypted:
+interface ProxyCredentials {
+  username: string;   // encrypted
+  password: string;   // encrypted
+}
+```
 
----
+### 8.3 Access Control
 
-## 8. Dependencies
-
-### 8.1 Internal Dependencies
-
-| Dependency | Status | Required For |
-|------------|--------|--------------|
-| AXON Soul Service | ✅ Complete | Soul data |
-| AXON Persona Service | ✅ Complete | Persona data |
-| Postiz Integration Service | ✅ Existing | Integration data |
-| AXON Navigation | ✅ Complete | Matrix page routing |
-
-### 8.2 External Dependencies
-
-None - all required services are internal.
+- All endpoints require authentication
+- Organization-level isolation (users only see their org's data)
+- Audit logging for sensitive operations
 
 ---
 
-## 9. Risks & Mitigations
+## 9. Success Metrics
 
-| Risk | Impact | Probability | Mitigation |
-|------|--------|-------------|------------|
-| Performance with large matrices | High | Medium | Implement virtualization, pagination |
-| Data inconsistency (Soul deleted) | Medium | Low | Cascade delete via triggers |
-| User confusion with new UI | Medium | Medium | Add onboarding tooltips |
-| Firestore-PostgreSQL sync issues | High | Low | Use transactions, add health checks |
-
----
-
-## 10. Future Considerations
-
-### 10.1 Phase 2 Enhancements
-
-- **Matrix Templates**: Save and apply common mapping patterns
-- **Scheduled Mappings**: Time-based channel access (e.g., campaign periods)
-- **Mapping Analytics**: Track which Soul-Channel combos perform best
-- **Auto-suggestions**: AI recommends optimal mappings based on content
-
-### 10.2 Integration Opportunities
-
-- **Content Calendar**: Show matrix-filtered view in calendar
-- **Analytics Dashboard**: Performance by Soul-Channel combination
-- **Bulk Content**: Create same post for all channels of a Soul
+| Metric | Target | Status |
+|--------|--------|--------|
+| Matrix load time | < 500ms | ✅ Met |
+| Mapping operation latency | < 200ms | ✅ Met |
+| User can create Soul→Channel mapping | < 30 seconds | ✅ Met |
+| Account creation with credentials | < 1 minute | ✅ Met |
+| Proxy assignment to account | < 10 seconds | ✅ Met |
 
 ---
 
-## Appendix A: Glossary
+## 10. Glossary
 
 | Term | Definition |
 |------|------------|
-| Soul | An identity container representing a brand or persona |
-| Integration | A connected social media channel (OAuth-authenticated) |
-| Mapping | A link between a Soul and an Integration |
-| Matrix | The visual representation of all Soul-Integration mappings |
-| Primary Channel | The default channel for a Soul when creating content |
+| **Soul** | An identity container representing a brand, person, or bot |
+| **Account** | A platform-specific account with credentials (stored in Firestore) |
+| **Integration** | An OAuth-connected social media channel (stored in PostgreSQL) |
+| **Channel** | Synonym for Integration - a connected social media channel |
+| **Mapping** | A link between a Soul and an Integration |
+| **Matrix** | The visual representation of all Soul-Integration mappings |
+| **Primary Channel** | The default channel for a Soul when creating content |
+| **Proxy** | An IP address used for account safety and anonymity |
+| **Credentials** | Username/password/tokens for platform authentication |
+| **Warming** | Gradual account activity increase to build trust |
 
 ---
 
-## Appendix B: API Reference
-
-See detailed API documentation in `/docs/api/matrix-api.md`
-
----
-
-**Document History**
+## Document History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | 2026-01-26 | WeCrew Team | Initial draft |
+| 1.0 | 2026-01-26 | WeCrew Team | Initial draft (Matrix only) |
+| 2.0 | 2026-01-26 | WeCrew Team | Complete rewrite with Account-Integration architecture |

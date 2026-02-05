@@ -465,10 +465,11 @@ export function useSoulCredentialMutations() {
     platform: string,
     clientId: string,
     clientSecret: string,
+    additionalConfig?: Record<string, string>,
   ) => {
     const response = await fetch(`/axon/souls/${soulId}/credentials/${platform}`, {
       method: 'PUT',
-      body: JSON.stringify({ clientId, clientSecret }),
+      body: JSON.stringify({ clientId, clientSecret, additionalConfig }),
     });
     if (!response.ok) throw new Error('Failed to save credentials');
     return response.json();

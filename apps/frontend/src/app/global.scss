@@ -11,6 +11,16 @@ body {
   color: var(--new-btn-text);
 }
 
+h1, h2, h3, .heading {
+  font-family: var(--font-halant), 'Halant', Georgia, serif;
+  font-weight: 400;
+  color: var(--new-btn-text);
+}
+
+button, [type="button"], [type="submit"] {
+  border-radius: 12px;
+}
+
 body * {
   outline: none !important;
 }

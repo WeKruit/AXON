@@ -23,7 +23,8 @@ export class CredentialResolverService {
     return {
       client_id: creds.clientId,
       client_secret: creds.clientSecret,
-      instanceUrl: '',
+      instanceUrl: creds.additionalConfig?.instanceUrl || '',
+      additionalConfig: creds.additionalConfig,
     };
   }
 }

@@ -9,7 +9,7 @@ export const loadSwagger = (app: INestApplication) => {
   }
 
   const config = new DocumentBuilder()
-    .setTitle('Postiz Swagger file')
+    .setTitle('AXON Swagger file')
     .setDescription('API description')
     .setVersion('1.0')
     .build();

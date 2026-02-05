@@ -16,7 +16,7 @@ import {
 import { AuthService } from '@gitroom/helpers/auth/auth.service';
 import { MatrixRepository } from '@gitroom/nestjs-libraries/database/prisma/matrix/matrix.repository';
 
-// Map from Postiz providerIdentifier to AXON Platform enum
+// Map from AXON providerIdentifier to AXON Platform enum
 const PROVIDER_TO_PLATFORM: Record<string, Platform> = {
   twitter: Platform.TWITTER,
   x: Platform.TWITTER,
@@ -413,7 +413,7 @@ export class AccountService {
   }
 
   /**
-   * Link an account to a Postiz integration.
+   * Link an account to an AXON integration.
    * Validates that the integration exists and matches the account's platform.
    */
   async linkToIntegration(
@@ -461,7 +461,7 @@ export class AccountService {
   }
 
   /**
-   * Unlink an account from its Postiz integration.
+   * Unlink an account from its AXON integration.
    */
   async unlinkFromIntegration(
     organizationId: string,

@@ -1,1276 +1,674 @@
-# M4: Soul-Channel Matrix - Implementation Plan
+# M4: Soul-Channel-Account Management - Implementation Plan
 
 **Date:** 2026-01-26
-**Status:** Ready for Implementation
+**Status:** Phase 1 Complete, Phase 2 Ready
+**Version:** 2.0
 
 ---
 
 ## 1. Implementation Overview
 
-### 1.1 Scope Summary
+### 1.1 Phase Summary
 
-| Component | New Files | Modified Files | Effort |
-|-----------|-----------|----------------|--------|
-| Database | 1 migration | 1 schema file | Small |
-| Backend | 6 files | 2 files | Medium |
-| Frontend | 12 files | 3 files | Large |
-| Tests | 8 files | 0 files | Medium |
+| Phase | Description | Status |
+|-------|-------------|--------|
+| **Phase 1** | Soul-Channel Matrix (many-to-many mapping) | ✅ Complete |
+| **Phase 2** | Account-Integration Linking | 🔄 Ready |
+| **Phase 3** | Proxy-based Operations | 🔜 Future |
+| **Phase 4** | Browser Automation | 🔜 Future |
 
-### 1.2 Team Assignments
+### 1.2 Current Architecture (Phase 1 Complete)
 
-| Developer | Role | Tasks |
-|-----------|------|-------|
-| **Blake** | Backend | Prisma schema, Matrix service, API endpoints |
-| **Casey** | Frontend | Matrix UI, hooks, content creation integration |
-| **Alex** | AI Integration | Persona-aware content suggestions (Phase 2) |
+```
+┌─────────────────┐         ┌─────────────────┐
+│     Soul        │ M:N     │   Integration   │
+│   (Firestore)   │◄───────►│  (PostgreSQL)   │
+└─────────────────┘         └─────────────────┘
+        │                          │
+        │ 1:N                      │
+        ▼                          │
+┌─────────────────┐                │
+│    Account      │                │
+│   (Firestore)   │────────────────┘ (no link yet)
+└─────────────────┘
+        │
+        │ N:1
+        ▼
+┌─────────────────┐
+│     Proxy       │
+│   (Firestore)   │
+└─────────────────┘
+```
+
+### 1.3 Target Architecture (Phase 2)
+
+```
+┌─────────────────┐         ┌─────────────────┐
+│     Soul        │ M:N     │   Integration   │
+│   (Firestore)   │◄───────►│  (PostgreSQL)   │
+└─────────────────┘    │    └─────────────────┘
+        │              │           ▲
+        │ 1:N          │ includes  │ 1:1
+        ▼              │ accountId │
+┌─────────────────┐    │           │
+│    Account      │◄───┴───────────┘
+│   (Firestore)   │  integrationId
+└─────────────────┘
+        │
+        │ N:1
+        ▼
+┌─────────────────┐
+│     Proxy       │
+│   (Firestore)   │
+└─────────────────┘
+```
 
 ---
 
-## 2. Backend Requirements
+## 2. Phase 1: Soul-Channel Matrix (COMPLETE) ✅
 
-### 2.1 Database Schema Changes
+### 2.1 Completed Components
+
+#### Backend (All Complete)
+- ✅ `SoulIntegrationMapping` Prisma schema
+- ✅ Matrix DTOs (`matrix.dto.ts`)
+- ✅ Matrix Repository (`matrix.repository.ts`)
+- ✅ Matrix Service (`matrix.service.ts`)
+- ✅ Matrix Controller (`matrix.controller.ts`)
+- ✅ Module registration
+
+#### Frontend (All Complete)
+- ✅ Matrix types (`types.ts`)
+- ✅ Matrix hooks (`use-matrix.ts`)
+- ✅ Matrix grid component (`matrix-grid.component.tsx`)
+- ✅ Matrix cell component (`matrix-cell.component.tsx`)
+- ✅ Matrix list component (`matrix-list.component.tsx`)
+- ✅ Matrix page (`/axon/matrix`)
+- ✅ AXON navigation with Matrix link
+
+### 2.2 API Endpoints (Complete)
+
+| Method | Endpoint | Status |
+|--------|----------|--------|
+| GET | `/axon/matrix` | ✅ |
+| GET | `/axon/matrix/souls/:soulId/integrations` | ✅ |
+| GET | `/axon/matrix/integrations/:integrationId/souls` | ✅ |
+| POST | `/axon/matrix/mappings` | ✅ |
+| POST | `/axon/matrix/mappings/toggle` | ✅ |
+| POST | `/axon/matrix/mappings/bulk` | ✅ |
+| PATCH | `/axon/matrix/mappings/:id` | ✅ |
+| DELETE | `/axon/matrix/mappings/:id` | ✅ |
+| POST | `/axon/matrix/mappings/:id/primary` | ✅ |
+
+---
+
+## 3. Phase 2: Account-Integration Linking
+
+### 3.1 Overview
+
+Link Firestore Accounts to PostgreSQL Integrations to enable:
+- Know which credentials belong to which OAuth channel
+- Track which Account is used for which channel
+- Enable future proxy-based posting
+
+### 3.2 Schema Changes
+
+#### 3.2.1 Add `accountId` to SoulIntegrationMapping
 
 **File:** `libraries/nestjs-libraries/src/database/prisma/schema.prisma`
 
 ```prisma
-// Add after Integration model
-
 model SoulIntegrationMapping {
-  id              String      @id @default(cuid())
-  soulId          String      // Firestore Soul document ID
-  integrationId   String
-  organizationId  String
+  id             String       @id @default(cuid())
+  soulId         String
+  integrationId  String
+  organizationId String
+  
+  // NEW: Link to specific Account
+  accountId      String?      // Firestore Account ID
+  
+  isPrimary      Boolean      @default(false)
+  priority       Int          @default(0)
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  createdBy      String?
 
-  // Mapping properties
-  isPrimary       Boolean     @default(false)
-  priority        Int         @default(0)
-  notes           String?
-
-  // Metadata
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  createdBy       String?
-
-  // Relations
-  integration     Integration  @relation(fields: [integrationId], references: [id], onDelete: Cascade)
-  organization    Organization @relation(fields: [organizationId], references: [id])
+  integration    Integration  @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
   @@unique([soulId, integrationId])
   @@index([soulId])
   @@index([integrationId])
   @@index([organizationId])
+  @@index([accountId])          // NEW
   @@map("soul_integration_mapping")
 }
-
-// Update Integration model to add relation
-model Integration {
-  // ... existing fields ...
-
-  // Add this relation
-  soulMappings    SoulIntegrationMapping[]
-}
-
-// Update Organization model to add relation
-model Organization {
-  // ... existing fields ...
-
-  // Add this relation
-  soulMappings    SoulIntegrationMapping[]
-}
 ```
 
-### 2.2 DTOs
+#### 3.2.2 Add `integrationId` to Account (Firestore)
 
-**File:** `libraries/nestjs-libraries/src/dtos/matrix/matrix.dto.ts`
+**File:** `libraries/nestjs-libraries/src/dtos/axon/account.dto.ts`
 
 ```typescript
-import { IsString, IsBoolean, IsOptional, IsNumber, IsArray, ValidateNested, IsEnum } from 'class-validator';
-import { Type } from 'class-transformer';
-
-// Response DTOs
-export class MappingDto {
-  id: string;
-  soulId: string;
-  integrationId: string;
-  isPrimary: boolean;
-  priority: number;
-  createdAt: Date;
+// Add to Account interface
+export interface Account extends FirestoreDocument {
+  // ... existing fields ...
+  
+  integrationId?: string;  // NEW: Link to PostgreSQL Integration
 }
 
-export class SoulWithMappingsDto {
-  id: string;
-  name: string;
-  description?: string;
-  status: string;
-  persona?: {
-    id: string;
-    name: string;
-    tone: string;
-    style: string;
-  };
-  integrationIds: string[];
-  mappings: MappingDto[];
-}
-
-export class IntegrationWithMappingsDto {
-  id: string;
-  name: string;
-  platform: string;
-  picture?: string;
-  disabled: boolean;
-  soulIds: string[];
-}
-
-export class MatrixResponseDto {
-  souls: SoulWithMappingsDto[];
-  integrations: IntegrationWithMappingsDto[];
-  mappings: MappingDto[];
-  stats: {
-    totalSouls: number;
-    totalIntegrations: number;
-    totalMappings: number;
-  };
-}
-
-// Request DTOs
-export class CreateMappingDto {
-  @IsString()
-  soulId: string;
-
-  @IsString()
-  integrationId: string;
-
-  @IsBoolean()
-  @IsOptional()
-  isPrimary?: boolean;
-
-  @IsNumber()
-  @IsOptional()
-  priority?: number;
-}
-
-export class UpdateMappingDto {
-  @IsBoolean()
-  @IsOptional()
-  isPrimary?: boolean;
-
-  @IsNumber()
-  @IsOptional()
-  priority?: number;
-
+// Add to CreateAccountDto
+export class CreateAccountDto {
+  // ... existing fields ...
+  
+  @ApiPropertyOptional({ description: 'Linked Integration ID' })
   @IsString()
   @IsOptional()
-  notes?: string;
+  integrationId?: string;
 }
 
-export enum BulkActionType {
-  CREATE = 'create',
-  DELETE = 'delete',
-}
-
-export class BulkMappingOperationDto {
-  @IsEnum(BulkActionType)
-  action: BulkActionType;
-
-  @IsString()
-  soulId: string;
-
-  @IsString()
-  integrationId: string;
-}
-
-export class BulkMappingRequestDto {
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => BulkMappingOperationDto)
-  operations: BulkMappingOperationDto[];
-}
-
-export class BulkMappingResponseDto {
-  success: boolean;
-  created: number;
-  deleted: number;
-  errors: Array<{
-    operation: BulkMappingOperationDto;
-    error: string;
-  }>;
-}
-
-// Query DTOs
-export class MatrixQueryDto {
+// Add to UpdateAccountDto
+export class UpdateAccountDto {
+  // ... existing fields ...
+  
+  @ApiPropertyOptional({ description: 'Linked Integration ID' })
   @IsString()
   @IsOptional()
-  platform?: string;
+  integrationId?: string;
+}
 
-  @IsString()
-  @IsOptional()
-  soulId?: string;
-
-  @IsString()
-  @IsOptional()
-  search?: string;
+// Add to AccountResponseDto
+export class AccountResponseDto {
+  // ... existing fields ...
+  
+  @ApiPropertyOptional({ description: 'Linked Integration ID' })
+  integrationId?: string;
 }
 ```
 
-### 2.3 Repository
+### 3.3 Backend Implementation
 
-**File:** `libraries/nestjs-libraries/src/database/prisma/matrix/matrix.repository.ts`
+#### 3.3.1 Update Account Repository
+
+**File:** `libraries/nestjs-libraries/src/database/firestore/collections/accounts/account.repository.ts`
+
+Add methods:
 
 ```typescript
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma.service';
-import { CreateMappingDto, UpdateMappingDto, BulkMappingOperationDto, BulkActionType } from '@gitroom/nestjs-libraries/dtos/matrix/matrix.dto';
-
-@Injectable()
-export class MatrixRepository {
-  constructor(private prisma: PrismaService) {}
-
-  async findAllMappings(organizationId: string) {
-    return this.prisma.soulIntegrationMapping.findMany({
-      where: { organizationId },
-      include: {
-        integration: true,
-      },
-      orderBy: [
-        { soulId: 'asc' },
-        { priority: 'asc' },
-      ],
-    });
+async linkIntegration(organizationId: string, accountId: string, integrationId: string): Promise<void> {
+  const account = await this.findById(organizationId, accountId);
+  if (!account) {
+    throw new NotFoundException('Account not found');
   }
+  await this.firestore.update<Account>(COLLECTION, accountId, { integrationId });
+}
 
-  async findMappingsBySoul(soulId: string, organizationId: string) {
-    return this.prisma.soulIntegrationMapping.findMany({
-      where: { soulId, organizationId },
-      include: {
-        integration: true,
-      },
-      orderBy: { priority: 'asc' },
-    });
+async unlinkIntegration(organizationId: string, accountId: string): Promise<void> {
+  const account = await this.findById(organizationId, accountId);
+  if (!account) {
+    throw new NotFoundException('Account not found');
   }
+  await this.firestore.update<Account>(COLLECTION, accountId, { integrationId: null });
+}
 
-  async findMappingsByIntegration(integrationId: string, organizationId: string) {
-    return this.prisma.soulIntegrationMapping.findMany({
-      where: { integrationId, organizationId },
-      orderBy: { priority: 'asc' },
-    });
+async findByIntegrationId(organizationId: string, integrationId: string): Promise<Account | null> {
+  const results = await this.firestore.query<Account>(COLLECTION, [
+    { field: 'organizationId', operator: '==', value: organizationId },
+    { field: 'integrationId', operator: '==', value: integrationId },
+  ], 1);
+  return results[0] || null;
+}
+```
+
+#### 3.3.2 Update Account Service
+
+**File:** `libraries/nestjs-libraries/src/database/firestore/collections/accounts/account.service.ts`
+
+Add methods:
+
+```typescript
+async linkToIntegration(
+  organizationId: string, 
+  accountId: string, 
+  integrationId: string
+): Promise<AccountResponseDto> {
+  // Validate integration exists and belongs to org
+  const integration = await this.integrationService.findById(integrationId);
+  if (!integration || integration.organizationId !== organizationId) {
+    throw new NotFoundException('Integration not found');
   }
-
-  async findMapping(soulId: string, integrationId: string) {
-    return this.prisma.soulIntegrationMapping.findUnique({
-      where: {
-        soulId_integrationId: { soulId, integrationId },
-      },
-    });
+  
+  // Check platform match
+  const account = await this.findById(organizationId, accountId);
+  if (account.platform !== integration.providerIdentifier) {
+    throw new BadRequestException('Platform mismatch between account and integration');
   }
+  
+  await this.accountRepository.linkIntegration(organizationId, accountId, integrationId);
+  return this.findById(organizationId, accountId);
+}
 
-  async createMapping(data: CreateMappingDto & { organizationId: string; createdBy?: string }) {
-    // If setting as primary, unset other primaries for this soul
-    if (data.isPrimary) {
-      await this.prisma.soulIntegrationMapping.updateMany({
-        where: { soulId: data.soulId, organizationId: data.organizationId },
-        data: { isPrimary: false },
-      });
-    }
+async unlinkFromIntegration(
+  organizationId: string, 
+  accountId: string
+): Promise<AccountResponseDto> {
+  await this.accountRepository.unlinkIntegration(organizationId, accountId);
+  return this.findById(organizationId, accountId);
+}
 
-    return this.prisma.soulIntegrationMapping.create({
-      data: {
-        soulId: data.soulId,
-        integrationId: data.integrationId,
-        organizationId: data.organizationId,
-        isPrimary: data.isPrimary ?? false,
-        priority: data.priority ?? 0,
-        createdBy: data.createdBy,
-      },
-      include: {
-        integration: true,
-      },
-    });
+async autoLinkByHandle(
+  organizationId: string, 
+  integrationId: string,
+  platform: string,
+  handle: string
+): Promise<AccountResponseDto | null> {
+  // Find account by platform + handle
+  const account = await this.accountRepository.findByHandle(organizationId, platform, handle);
+  if (!account) {
+    return null;
   }
-
-  async updateMapping(id: string, data: UpdateMappingDto, organizationId: string) {
-    const existing = await this.prisma.soulIntegrationMapping.findUnique({
-      where: { id },
-    });
-
-    if (!existing) {
-      throw new Error('Mapping not found');
-    }
-
-    // If setting as primary, unset other primaries for this soul
-    if (data.isPrimary) {
-      await this.prisma.soulIntegrationMapping.updateMany({
-        where: {
-          soulId: existing.soulId,
-          organizationId,
-          id: { not: id },
-        },
-        data: { isPrimary: false },
-      });
-    }
-
-    return this.prisma.soulIntegrationMapping.update({
-      where: { id },
-      data,
-    });
+  
+  // Link if not already linked
+  if (!account.integrationId) {
+    await this.accountRepository.linkIntegration(organizationId, account.id, integrationId);
   }
+  
+  return this.findById(organizationId, account.id);
+}
+```
 
-  async deleteMapping(id: string) {
-    return this.prisma.soulIntegrationMapping.delete({
-      where: { id },
-    });
-  }
+#### 3.3.3 Update Accounts Controller
 
-  async deleteMappingBySoulAndIntegration(soulId: string, integrationId: string) {
-    return this.prisma.soulIntegrationMapping.delete({
-      where: {
-        soulId_integrationId: { soulId, integrationId },
-      },
-    });
-  }
+**File:** `apps/backend/src/api/routes/accounts.controller.ts`
 
-  async bulkOperations(operations: BulkMappingOperationDto[], organizationId: string, createdBy?: string) {
-    const results = {
-      created: 0,
-      deleted: 0,
-      errors: [] as Array<{ operation: BulkMappingOperationDto; error: string }>,
-    };
+Add endpoints:
 
-    for (const op of operations) {
-      try {
-        if (op.action === BulkActionType.CREATE) {
-          await this.createMapping({
-            soulId: op.soulId,
-            integrationId: op.integrationId,
-            organizationId,
-            createdBy,
-          });
-          results.created++;
-        } else if (op.action === BulkActionType.DELETE) {
-          await this.deleteMappingBySoulAndIntegration(op.soulId, op.integrationId);
-          results.deleted++;
-        }
-      } catch (error) {
-        results.errors.push({
-          operation: op,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
-      }
-    }
-
-    return results;
-  }
-
-  async deleteMappingsBySoul(soulId: string, organizationId: string) {
-    return this.prisma.soulIntegrationMapping.deleteMany({
-      where: { soulId, organizationId },
-    });
-  }
-
-  async getIntegrationsForOrg(organizationId: string) {
-    return this.prisma.integration.findMany({
-      where: {
-        organizationId,
-        disabled: false,
-      },
-      select: {
-        id: true,
-        name: true,
-        providerIdentifier: true,
-        picture: true,
-        disabled: true,
-        soulMappings: {
-          select: {
-            soulId: true,
-          },
-        },
-      },
-    });
+```typescript
+@Patch(':id/integration')
+@ApiOperation({ summary: 'Link account to integration' })
+async linkIntegration(
+  @GetOrgFromRequest() org: Organization,
+  @Param('id') id: string,
+  @Body() dto: { integrationId: string | null }
+) {
+  if (dto.integrationId) {
+    return this.accountService.linkToIntegration(org.id, id, dto.integrationId);
+  } else {
+    return this.accountService.unlinkFromIntegration(org.id, id);
   }
 }
 ```
 
-### 2.4 Service
+#### 3.3.4 Update Matrix Service
 
 **File:** `libraries/nestjs-libraries/src/database/prisma/matrix/matrix.service.ts`
 
+Update to include accountId in mappings:
+
 ```typescript
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { MatrixRepository } from './matrix.repository';
-import { SoulService } from '../../firestore/collections/souls/soul.service';
-import { PersonaService } from '../../firestore/collections/personas/persona.service';
-import {
-  MatrixResponseDto,
-  CreateMappingDto,
-  UpdateMappingDto,
-  BulkMappingRequestDto,
-  BulkMappingResponseDto,
-  MatrixQueryDto,
-} from '@gitroom/nestjs-libraries/dtos/matrix/matrix.dto';
-
-@Injectable()
-export class MatrixService {
-  constructor(
-    private readonly matrixRepository: MatrixRepository,
-    private readonly soulService: SoulService,
-    private readonly personaService: PersonaService,
-  ) {}
-
-  async getMatrix(organizationId: string, query?: MatrixQueryDto): Promise<MatrixResponseDto> {
-    // Fetch all data in parallel
-    const [mappings, integrations, souls] = await Promise.all([
-      this.matrixRepository.findAllMappings(organizationId),
-      this.matrixRepository.getIntegrationsForOrg(organizationId),
-      this.soulService.findAll(organizationId),
-    ]);
-
-    // Filter integrations by platform if specified
-    let filteredIntegrations = integrations;
-    if (query?.platform) {
-      filteredIntegrations = integrations.filter(
-        (i) => i.providerIdentifier === query.platform
-      );
-    }
-
-    // Filter souls by search if specified
-    let filteredSouls = souls;
-    if (query?.search) {
-      const searchLower = query.search.toLowerCase();
-      filteredSouls = souls.filter(
-        (s) => s.name.toLowerCase().includes(searchLower)
-      );
-    }
-
-    // Build soul mappings
-    const soulsWithMappings = await Promise.all(
-      filteredSouls.map(async (soul) => {
-        const soulMappings = mappings.filter((m) => m.soulId === soul.id);
-        const persona = soul.personaId
-          ? await this.personaService.findById(soul.personaId)
-          : null;
-
-        return {
-          id: soul.id,
-          name: soul.name,
-          description: soul.description,
-          status: soul.status,
-          persona: persona ? {
-            id: persona.id,
-            name: persona.name,
-            tone: persona.tone,
-            style: persona.style,
-          } : undefined,
-          integrationIds: soulMappings.map((m) => m.integrationId),
-          mappings: soulMappings.map((m) => ({
-            id: m.id,
-            soulId: m.soulId,
-            integrationId: m.integrationId,
-            isPrimary: m.isPrimary,
-            priority: m.priority,
-            createdAt: m.createdAt,
-          })),
-        };
-      })
+async createMapping(data: CreateMappingDto, organizationId: string, userId?: string) {
+  // ... existing validation ...
+  
+  // Auto-find account for this soul + integration's platform
+  let accountId: string | undefined;
+  const integration = await this.integrationService.findById(data.integrationId);
+  if (integration) {
+    const accounts = await this.accountService.findBySoulId(organizationId, data.soulId);
+    const matchingAccount = accounts.find(a => 
+      a.platform === integration.providerIdentifier
     );
-
-    // Build integration mappings
-    const integrationsWithMappings = filteredIntegrations.map((integration) => ({
-      id: integration.id,
-      name: integration.name,
-      platform: integration.providerIdentifier,
-      picture: integration.picture,
-      disabled: integration.disabled,
-      soulIds: integration.soulMappings.map((m) => m.soulId),
-    }));
-
-    return {
-      souls: soulsWithMappings,
-      integrations: integrationsWithMappings,
-      mappings: mappings.map((m) => ({
-        id: m.id,
-        soulId: m.soulId,
-        integrationId: m.integrationId,
-        isPrimary: m.isPrimary,
-        priority: m.priority,
-        createdAt: m.createdAt,
-      })),
-      stats: {
-        totalSouls: soulsWithMappings.length,
-        totalIntegrations: integrationsWithMappings.length,
-        totalMappings: mappings.length,
-      },
-    };
+    accountId = matchingAccount?.id;
   }
-
-  async getIntegrationsForSoul(soulId: string, organizationId: string) {
-    // Verify soul exists
-    const soul = await this.soulService.findById(soulId);
-    if (!soul || soul.organizationId !== organizationId) {
-      throw new NotFoundException('Soul not found');
-    }
-
-    const mappings = await this.matrixRepository.findMappingsBySoul(soulId, organizationId);
-
-    return mappings.map((m) => ({
-      id: m.integration.id,
-      name: m.integration.name,
-      platform: m.integration.providerIdentifier,
-      picture: m.integration.picture,
-      isPrimary: m.isPrimary,
-      priority: m.priority,
-    }));
-  }
-
-  async getSoulsForIntegration(integrationId: string, organizationId: string) {
-    const mappings = await this.matrixRepository.findMappingsByIntegration(
-      integrationId,
-      organizationId
-    );
-
-    const souls = await Promise.all(
-      mappings.map(async (m) => {
-        const soul = await this.soulService.findById(m.soulId);
-        return soul ? {
-          id: soul.id,
-          name: soul.name,
-          status: soul.status,
-          isPrimary: m.isPrimary,
-        } : null;
-      })
-    );
-
-    return souls.filter(Boolean);
-  }
-
-  async createMapping(data: CreateMappingDto, organizationId: string, userId?: string) {
-    // Verify soul exists and belongs to org
-    const soul = await this.soulService.findById(data.soulId);
-    if (!soul || soul.organizationId !== organizationId) {
-      throw new NotFoundException('Soul not found');
-    }
-
-    // Check if mapping already exists
-    const existing = await this.matrixRepository.findMapping(data.soulId, data.integrationId);
-    if (existing) {
-      throw new BadRequestException('Mapping already exists');
-    }
-
-    return this.matrixRepository.createMapping({
-      ...data,
-      organizationId,
-      createdBy: userId,
-    });
-  }
-
-  async updateMapping(id: string, data: UpdateMappingDto, organizationId: string) {
-    return this.matrixRepository.updateMapping(id, data, organizationId);
-  }
-
-  async deleteMapping(id: string) {
-    return this.matrixRepository.deleteMapping(id);
-  }
-
-  async toggleMapping(soulId: string, integrationId: string, organizationId: string, userId?: string) {
-    const existing = await this.matrixRepository.findMapping(soulId, integrationId);
-
-    if (existing) {
-      await this.matrixRepository.deleteMapping(existing.id);
-      return { action: 'deleted', mapping: null };
-    } else {
-      const mapping = await this.createMapping(
-        { soulId, integrationId },
-        organizationId,
-        userId
-      );
-      return { action: 'created', mapping };
-    }
-  }
-
-  async bulkOperations(
-    data: BulkMappingRequestDto,
-    organizationId: string,
-    userId?: string
-  ): Promise<BulkMappingResponseDto> {
-    const results = await this.matrixRepository.bulkOperations(
-      data.operations,
-      organizationId,
-      userId
-    );
-
-    return {
-      success: results.errors.length === 0,
-      created: results.created,
-      deleted: results.deleted,
-      errors: results.errors,
-    };
-  }
-
-  // Called when a Soul is deleted - cleanup mappings
-  async onSoulDeleted(soulId: string, organizationId: string) {
-    await this.matrixRepository.deleteMappingsBySoul(soulId, organizationId);
-  }
+  
+  return this.matrixRepository.createMapping({
+    ...data,
+    accountId,
+    organizationId,
+    createdBy: userId,
+  });
 }
 ```
 
-### 2.5 Controller
+### 3.4 Frontend Implementation
 
-**File:** `apps/backend/src/api/routes/matrix.controller.ts`
+#### 3.4.1 Update Types
 
-```typescript
-import {
-  Controller,
-  Get,
-  Post,
-  Patch,
-  Delete,
-  Body,
-  Param,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
-import { MatrixService } from '@gitroom/nestjs-libraries/database/prisma/matrix/matrix.service';
-import {
-  CreateMappingDto,
-  UpdateMappingDto,
-  BulkMappingRequestDto,
-  MatrixQueryDto,
-} from '@gitroom/nestjs-libraries/dtos/matrix/matrix.dto';
-import { AuthGuard } from '@gitroom/backend/guards/auth.guard';
-import { GetOrgFromRequest } from '@gitroom/backend/decorators/org.decorator';
-import { GetUserFromRequest } from '@gitroom/backend/decorators/user.decorator';
-import { Organization, User } from '@prisma/client';
-
-@Controller('matrix')
-@UseGuards(AuthGuard)
-export class MatrixController {
-  constructor(private readonly matrixService: MatrixService) {}
-
-  @Get()
-  async getMatrix(
-    @GetOrgFromRequest() org: Organization,
-    @Query() query: MatrixQueryDto,
-  ) {
-    return this.matrixService.getMatrix(org.id, query);
-  }
-
-  @Get('souls/:soulId/integrations')
-  async getIntegrationsForSoul(
-    @GetOrgFromRequest() org: Organization,
-    @Param('soulId') soulId: string,
-  ) {
-    return this.matrixService.getIntegrationsForSoul(soulId, org.id);
-  }
-
-  @Get('integrations/:integrationId/souls')
-  async getSoulsForIntegration(
-    @GetOrgFromRequest() org: Organization,
-    @Param('integrationId') integrationId: string,
-  ) {
-    return this.matrixService.getSoulsForIntegration(integrationId, org.id);
-  }
-
-  @Post('mappings')
-  async createMapping(
-    @GetOrgFromRequest() org: Organization,
-    @GetUserFromRequest() user: User,
-    @Body() data: CreateMappingDto,
-  ) {
-    return this.matrixService.createMapping(data, org.id, user.id);
-  }
-
-  @Post('mappings/toggle')
-  async toggleMapping(
-    @GetOrgFromRequest() org: Organization,
-    @GetUserFromRequest() user: User,
-    @Body() data: CreateMappingDto,
-  ) {
-    return this.matrixService.toggleMapping(
-      data.soulId,
-      data.integrationId,
-      org.id,
-      user.id,
-    );
-  }
-
-  @Post('mappings/bulk')
-  async bulkMappings(
-    @GetOrgFromRequest() org: Organization,
-    @GetUserFromRequest() user: User,
-    @Body() data: BulkMappingRequestDto,
-  ) {
-    return this.matrixService.bulkOperations(data, org.id, user.id);
-  }
-
-  @Patch('mappings/:id')
-  async updateMapping(
-    @GetOrgFromRequest() org: Organization,
-    @Param('id') id: string,
-    @Body() data: UpdateMappingDto,
-  ) {
-    return this.matrixService.updateMapping(id, data, org.id);
-  }
-
-  @Delete('mappings/:id')
-  async deleteMapping(@Param('id') id: string) {
-    return this.matrixService.deleteMapping(id);
-  }
-}
-```
-
-### 2.6 Module Registration
-
-**File:** `libraries/nestjs-libraries/src/database/prisma/matrix/matrix.module.ts`
+**File:** `apps/frontend/src/components/axon/types.ts`
 
 ```typescript
-import { Module } from '@nestjs/common';
-import { MatrixService } from './matrix.service';
-import { MatrixRepository } from './matrix.repository';
-import { PrismaModule } from '../prisma.module';
-import { FirestoreModule } from '../../firestore/firestore.module';
-
-@Module({
-  imports: [PrismaModule, FirestoreModule],
-  providers: [MatrixService, MatrixRepository],
-  exports: [MatrixService],
-})
-export class MatrixModule {}
-```
-
----
-
-## 3. Frontend Requirements
-
-### 3.1 Types
-
-**File:** `apps/frontend/src/components/axon/matrix/types.ts`
-
-```typescript
-export interface MatrixMapping {
-  id: string;
-  soulId: string;
-  integrationId: string;
-  isPrimary: boolean;
-  priority: number;
-  createdAt: string;
-}
-
-export interface MatrixSoul {
-  id: string;
-  name: string;
-  description?: string;
-  status: string;
-  persona?: {
+export interface Account {
+  // ... existing fields ...
+  integrationId?: string;
+  integration?: {
     id: string;
     name: string;
-    tone: string;
-    style: string;
-  };
-  integrationIds: string[];
-  mappings: MatrixMapping[];
-}
-
-export interface MatrixIntegration {
-  id: string;
-  name: string;
-  platform: string;
-  picture?: string;
-  disabled: boolean;
-  soulIds: string[];
-}
-
-export interface MatrixData {
-  souls: MatrixSoul[];
-  integrations: MatrixIntegration[];
-  mappings: MatrixMapping[];
-  stats: {
-    totalSouls: number;
-    totalIntegrations: number;
-    totalMappings: number;
+    platform: string;
+    picture?: string;
   };
 }
 
-export interface MatrixFilters {
-  platform?: string;
-  search?: string;
-  soulId?: string;
-}
-
-export type BulkAction = 'create' | 'delete';
-
-export interface BulkOperation {
-  action: BulkAction;
-  soulId: string;
-  integrationId: string;
-}
-```
-
-### 3.2 Hooks
-
-**File:** `apps/frontend/src/components/axon/matrix/use-matrix.ts`
-
-```typescript
-import useSWR from 'swr';
-import { useCallback } from 'react';
-import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
-import type { MatrixData, MatrixFilters, BulkOperation } from './types';
-
-export function useMatrix(filters?: MatrixFilters) {
-  const fetch = useFetch();
-
-  const queryParams = new URLSearchParams();
-  if (filters?.platform) queryParams.set('platform', filters.platform);
-  if (filters?.search) queryParams.set('search', filters.search);
-  if (filters?.soulId) queryParams.set('soulId', filters.soulId);
-
-  const queryString = queryParams.toString();
-  const url = `/matrix${queryString ? `?${queryString}` : ''}`;
-
-  const { data, error, isLoading, mutate } = useSWR<MatrixData>(
-    url,
-    () => fetch(url),
-    {
-      revalidateOnFocus: false,
-    }
-  );
-
-  return {
-    data,
-    error,
-    isLoading,
-    mutate,
-  };
-}
-
-export function useMatrixMutations() {
-  const fetch = useFetch();
-
-  const toggleMapping = useCallback(
-    async (soulId: string, integrationId: string) => {
-      return fetch('/matrix/mappings/toggle', {
-        method: 'POST',
-        body: JSON.stringify({ soulId, integrationId }),
-      });
-    },
-    [fetch]
-  );
-
-  const createMapping = useCallback(
-    async (soulId: string, integrationId: string, isPrimary?: boolean) => {
-      return fetch('/matrix/mappings', {
-        method: 'POST',
-        body: JSON.stringify({ soulId, integrationId, isPrimary }),
-      });
-    },
-    [fetch]
-  );
-
-  const deleteMapping = useCallback(
-    async (mappingId: string) => {
-      return fetch(`/matrix/mappings/${mappingId}`, {
-        method: 'DELETE',
-      });
-    },
-    [fetch]
-  );
-
-  const updateMapping = useCallback(
-    async (mappingId: string, data: { isPrimary?: boolean; priority?: number }) => {
-      return fetch(`/matrix/mappings/${mappingId}`, {
-        method: 'PATCH',
-        body: JSON.stringify(data),
-      });
-    },
-    [fetch]
-  );
-
-  const bulkOperations = useCallback(
-    async (operations: BulkOperation[]) => {
-      return fetch('/matrix/mappings/bulk', {
-        method: 'POST',
-        body: JSON.stringify({ operations }),
-      });
-    },
-    [fetch]
-  );
-
-  return {
-    toggleMapping,
-    createMapping,
-    deleteMapping,
-    updateMapping,
-    bulkOperations,
-  };
-}
-
-export function useSoulIntegrations(soulId: string | null) {
-  const fetch = useFetch();
-
-  const { data, error, isLoading, mutate } = useSWR(
-    soulId ? `/matrix/souls/${soulId}/integrations` : null,
-    () => fetch(`/matrix/souls/${soulId}/integrations`),
-    {
-      revalidateOnFocus: false,
-    }
-  );
-
-  return {
-    data,
-    error,
-    isLoading,
-    mutate,
+export interface MatrixMapping {
+  // ... existing fields ...
+  accountId?: string;
+  account?: {
+    id: string;
+    handle: string;
+    platform: string;
   };
 }
 ```
 
-### 3.3 Matrix Components
+#### 3.4.2 Add Integration Link UI
 
-**File:** `apps/frontend/src/components/axon/matrix/matrix-view.tsx`
+**File:** `apps/frontend/src/components/axon/accounts/account-integration-link.tsx`
 
 ```typescript
 'use client';
 
-import { FC, useState, useCallback, useMemo } from 'react';
-import { useMatrix, useMatrixMutations } from './use-matrix';
-import { MatrixCell } from './matrix-cell';
-import { MatrixHeader } from './matrix-header';
-import { MatrixRow } from './matrix-row';
-import { MatrixFilters } from './matrix-filters';
-import { BulkEditModal } from './bulk-edit-modal';
+import { FC, useState } from 'react';
+import { useIntegrations } from '@/hooks/use-integrations';
 import { useToaster } from '@gitroom/react/toaster/toaster';
-import type { MatrixFilters as Filters, BulkOperation } from './types';
 
-export const MatrixView: FC = () => {
-  const [filters, setFilters] = useState<Filters>({});
-  const [bulkMode, setBulkMode] = useState(false);
-  const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
-  const [showBulkModal, setShowBulkModal] = useState(false);
+interface AccountIntegrationLinkProps {
+  accountId: string;
+  platform: string;
+  currentIntegrationId?: string;
+  onLink: (integrationId: string | null) => Promise<void>;
+}
 
-  const { data, isLoading, mutate } = useMatrix(filters);
-  const { toggleMapping, bulkOperations } = useMatrixMutations();
+export const AccountIntegrationLink: FC<AccountIntegrationLinkProps> = ({
+  accountId,
+  platform,
+  currentIntegrationId,
+  onLink,
+}) => {
+  const { data: integrations } = useIntegrations();
+  const [isLoading, setIsLoading] = useState(false);
   const toaster = useToaster();
-
-  const handleCellClick = useCallback(
-    async (soulId: string, integrationId: string) => {
-      if (bulkMode) {
-        const key = `${soulId}:${integrationId}`;
-        setSelectedCells((prev) => {
-          const next = new Set(prev);
-          if (next.has(key)) {
-            next.delete(key);
-          } else {
-            next.add(key);
-          }
-          return next;
-        });
-        return;
-      }
-
-      try {
-        const result = await toggleMapping(soulId, integrationId);
-        await mutate();
-        toaster.show(
-          result.action === 'created' ? 'Channel linked to Soul' : 'Channel unlinked from Soul',
-          'success'
-        );
-      } catch (error) {
-        toaster.show('Failed to update mapping', 'warning');
-      }
-    },
-    [bulkMode, toggleMapping, mutate, toaster]
-  );
-
-  const handleBulkAction = useCallback(
-    async (action: 'create' | 'delete') => {
-      const operations: BulkOperation[] = Array.from(selectedCells).map((key) => {
-        const [soulId, integrationId] = key.split(':');
-        return { action, soulId, integrationId };
-      });
-
-      try {
-        const result = await bulkOperations(operations);
-        await mutate();
-        setSelectedCells(new Set());
-        setBulkMode(false);
-        toaster.show(
-          `${result.created} created, ${result.deleted} deleted`,
-          'success'
-        );
-      } catch (error) {
-        toaster.show('Bulk operation failed', 'warning');
-      }
-    },
-    [selectedCells, bulkOperations, mutate, toaster]
-  );
-
-  const isMapped = useCallback(
-    (soulId: string, integrationId: string) => {
-      if (!data) return false;
-      return data.mappings.some(
-        (m) => m.soulId === soulId && m.integrationId === integrationId
+  
+  // Filter integrations by platform
+  const compatibleIntegrations = integrations?.filter(
+    (i) => i.providerIdentifier === platform
+  ) || [];
+  
+  const handleLink = async (integrationId: string | null) => {
+    setIsLoading(true);
+    try {
+      await onLink(integrationId);
+      toaster.show(
+        integrationId ? 'Account linked to channel' : 'Account unlinked',
+        'success'
       );
-    },
-    [data]
-  );
-
-  const getMapping = useCallback(
-    (soulId: string, integrationId: string) => {
-      if (!data) return null;
-      return data.mappings.find(
-        (m) => m.soulId === soulId && m.integrationId === integrationId
-      );
-    },
-    [data]
-  );
-
-  if (isLoading) {
-    return (
-      <div className="flex-1 bg-newBgColorInner p-6">
-        <div className="h-8 w-64 bg-newBgLineColor rounded animate-pulse mb-6" />
-        <div className="h-96 bg-newBgLineColor rounded-lg animate-pulse" />
-      </div>
-    );
-  }
-
-  if (!data) {
-    return (
-      <div className="flex-1 bg-newBgColorInner p-6">
-        <p className="text-textItemBlur">Failed to load matrix data</p>
-      </div>
-    );
-  }
-
+    } catch (error) {
+      toaster.show('Failed to link account', 'warning');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   return (
-    <div className="flex-1 bg-newBgColorInner p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-newTextColor">Soul-Channel Matrix</h1>
-          <p className="text-sm text-textItemBlur mt-1">
-            Connect your brand identities to social channels
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-textItemBlur">
-            {data.stats.totalMappings} active mappings
-          </span>
-          <button
-            onClick={() => {
-              setBulkMode(!bulkMode);
-              setSelectedCells(new Set());
-            }}
-            className={`px-4 py-2 rounded-[8px] text-sm transition-colors ${
-              bulkMode
-                ? 'bg-btnPrimary text-white'
-                : 'bg-newBgLineColor text-newTextColor hover:bg-newBgLineColor/80'
-            }`}
-          >
-            {bulkMode ? 'Exit Bulk Mode' : 'Bulk Edit'}
-          </button>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <MatrixFilters filters={filters} onChange={setFilters} />
-
-      {/* Bulk Actions Bar */}
-      {bulkMode && selectedCells.size > 0 && (
-        <div className="flex items-center gap-3 p-3 bg-btnPrimary/10 rounded-lg mb-4">
-          <span className="text-sm text-newTextColor">
-            {selectedCells.size} cells selected
-          </span>
-          <button
-            onClick={() => handleBulkAction('create')}
-            className="px-3 py-1.5 bg-green-500 text-white rounded-[8px] text-sm"
-          >
-            Link All
-          </button>
-          <button
-            onClick={() => handleBulkAction('delete')}
-            className="px-3 py-1.5 bg-red-500 text-white rounded-[8px] text-sm"
-          >
-            Unlink All
-          </button>
-          <button
-            onClick={() => setSelectedCells(new Set())}
-            className="px-3 py-1.5 bg-newBgLineColor text-newTextColor rounded-[8px] text-sm"
-          >
-            Clear Selection
-          </button>
-        </div>
+    <div className="space-y-2">
+      <label className="text-sm text-textItemBlur">Linked Channel</label>
+      <select
+        value={currentIntegrationId || ''}
+        onChange={(e) => handleLink(e.target.value || null)}
+        disabled={isLoading}
+        className="w-full p-2 bg-newBgColor border border-newTableBorder rounded-[8px]"
+      >
+        <option value="">-- Not Linked --</option>
+        {compatibleIntegrations.map((integration) => (
+          <option key={integration.id} value={integration.id}>
+            {integration.name} ({integration.providerIdentifier})
+          </option>
+        ))}
+      </select>
+      {compatibleIntegrations.length === 0 && (
+        <p className="text-xs text-textItemBlur">
+          No {platform} channels connected. Connect one first.
+        </p>
       )}
-
-      {/* Matrix Grid */}
-      {data.souls.length === 0 || data.integrations.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="w-16 h-16 rounded-full bg-newBgLineColor flex items-center justify-center mb-4">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="32"
-              height="32"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              className="text-textItemBlur"
-            >
-              <rect x="3" y="3" width="7" height="7" />
-              <rect x="14" y="3" width="7" height="7" />
-              <rect x="14" y="14" width="7" height="7" />
-              <rect x="3" y="14" width="7" height="7" />
-            </svg>
-          </div>
-          <h3 className="text-lg font-medium text-newTextColor mb-2">
-            {data.souls.length === 0 ? 'No Souls Created' : 'No Channels Connected'}
-          </h3>
-          <p className="text-sm text-textItemBlur mb-4 max-w-md">
-            {data.souls.length === 0
-              ? 'Create a Soul first to start building your matrix.'
-              : 'Connect social media channels to start building your matrix.'}
-          </p>
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                <th className="p-3 text-left bg-newBgLineColor rounded-tl-lg">
-                  <span className="text-sm font-medium text-textItemBlur">Souls</span>
-                </th>
-                {data.integrations.map((integration, idx) => (
-                  <MatrixHeader
-                    key={integration.id}
-                    integration={integration}
-                    isLast={idx === data.integrations.length - 1}
-                  />
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {data.souls.map((soul, rowIdx) => (
-                <MatrixRow
-                  key={soul.id}
-                  soul={soul}
-                  isLast={rowIdx === data.souls.length - 1}
-                >
-                  {data.integrations.map((integration) => {
-                    const mapping = getMapping(soul.id, integration.id);
-                    const isSelected = selectedCells.has(`${soul.id}:${integration.id}`);
-
-                    return (
-                      <MatrixCell
-                        key={`${soul.id}-${integration.id}`}
-                        soulId={soul.id}
-                        integrationId={integration.id}
-                        isMapped={!!mapping}
-                        isPrimary={mapping?.isPrimary || false}
-                        isSelected={isSelected}
-                        bulkMode={bulkMode}
-                        onClick={handleCellClick}
-                        onSetPrimary={async () => {
-                          // Handle set primary
-                        }}
-                      />
-                    );
-                  })}
-                </MatrixRow>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Legend */}
-      <div className="flex items-center gap-6 mt-6 text-sm text-textItemBlur">
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-btnPrimary" />
-          <span>Mapped</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded border border-newTableBorder" />
-          <span>Not Mapped</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-yellow-500">★</span>
-          <span>Primary Channel</span>
-        </div>
-      </div>
     </div>
   );
 };
 ```
 
-### 3.4 Additional Components
+### 3.5 Migration Steps
 
-I'll provide the remaining components in the task assignments. The key components are:
+1. **Database Migration:**
+   ```bash
+   # Add accountId column to soul_integration_mapping
+   pnpm run prisma-db-push
+   ```
 
-- `matrix-cell.tsx` - Individual cell with toggle/primary badge
-- `matrix-header.tsx` - Column header with platform icon
-- `matrix-row.tsx` - Row with Soul info
-- `matrix-filters.tsx` - Platform filter, search
-- `bulk-edit-modal.tsx` - Modal for bulk operations
+2. **Backend Deployment:**
+   - Deploy updated Account service with integration linking
+   - Deploy updated Matrix service with accountId support
 
-### 3.5 Navigation Update
+3. **Frontend Deployment:**
+   - Deploy updated Account management UI
+   - Deploy updated Matrix view with account info
 
-**File:** `apps/frontend/src/components/axon/ui/axon-nav.tsx`
+4. **Data Migration (Optional):**
+   - Run script to auto-link existing accounts to integrations by matching platform + handle
 
-Add Matrix to navigation:
+---
+
+## 4. Phase 3: Proxy-Based Operations (Future)
+
+### 4.1 Overview
+
+Use assigned proxies when making API calls or browser automation.
+
+### 4.2 Implementation Areas
+
+#### 4.2.1 HTTP Client with Proxy Support
 
 ```typescript
-const navItems: NavItem[] = [
-  { label: 'Souls', href: '/axon/souls', description: 'Identity containers' },
-  { label: 'Accounts', href: '/axon/accounts', description: 'Social accounts' },
-  { label: 'Personas', href: '/axon/personas', description: 'AI personalities' },
-  { label: 'Proxies', href: '/axon/proxies', description: 'IP management' },
-  { label: 'Matrix', href: '/axon/matrix', description: 'Soul-Channel mapping' }, // NEW
-];
+// Example: Proxy-aware HTTP client
+import { HttpsProxyAgent } from 'https-proxy-agent';
+
+class ProxyHttpClient {
+  async request(url: string, options: RequestOptions, proxy?: Proxy) {
+    if (proxy) {
+      const proxyUrl = `http://${proxy.credentials.username}:${proxy.credentials.password}@${proxy.host}:${proxy.port}`;
+      const agent = new HttpsProxyAgent(proxyUrl);
+      options.agent = agent;
+    }
+    return fetch(url, options);
+  }
+}
 ```
 
-### 3.6 Content Creation Integration
+#### 4.2.2 Integration Provider with Proxy
 
-Modify `apps/frontend/src/components/launches/add.edit.modal.tsx` to add Soul selector that filters available integrations.
-
----
-
-## 4. Testing Requirements
-
-### 4.1 Backend Tests
-
-| Test File | Coverage |
-|-----------|----------|
-| `matrix.service.spec.ts` | Service logic, Soul/Integration validation |
-| `matrix.repository.spec.ts` | Database operations, bulk ops |
-| `matrix.controller.spec.ts` | API endpoints, auth guards |
-
-### 4.2 Frontend Tests
-
-| Test File | Coverage |
-|-----------|----------|
-| `matrix-view.spec.tsx` | Main component rendering, interactions |
-| `use-matrix.spec.ts` | Hook data fetching, mutations |
-| `matrix-cell.spec.tsx` | Cell toggle, primary badge |
-
----
-
-## 5. Migration Steps
-
-### 5.1 Database Migration
-
-```bash
-# Generate migration
-pnpm run prisma-db-push
-
-# Or create migration file
-npx prisma migrate dev --name add_soul_integration_mapping
+```typescript
+// Example: X Provider with proxy support
+class XProviderWithProxy extends XProvider {
+  async post(
+    id: string,
+    accessToken: string,
+    postDetails: PostDetails[],
+    integration: Integration,
+    proxy?: Proxy  // NEW: Optional proxy
+  ): Promise<PostResponse[]> {
+    const client = new TwitterApi(accessToken, {
+      httpAgent: proxy ? this.createProxyAgent(proxy) : undefined,
+    });
+    // ... rest of posting logic
+  }
+}
 ```
 
-### 5.2 Deployment Order
+### 4.3 Posting Flow with Proxy
 
-1. Deploy database migration
-2. Deploy backend with new endpoints
-3. Deploy frontend with Matrix UI
-4. Enable feature flag
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    PROXY-BASED POSTING FLOW (Future)                    │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  1. Post Scheduled                                                      │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │  Post.integrationId → Integration                                │    │
+│  │  Mapping.accountId → Account                                     │    │
+│  │  Account.proxyId → Proxy                                         │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                               │                                          │
+│                               ▼                                          │
+│  2. Temporal Workflow                                                   │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │  - Fetch Integration (OAuth token)                               │    │
+│  │  - Fetch Account (via mapping.accountId)                         │    │
+│  │  - Fetch Proxy (via account.proxyId)                             │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                               │                                          │
+│                               ▼                                          │
+│  3. Post via API with Proxy                                             │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │  XProvider.post(token, postDetails, integration, proxy)          │    │
+│  │    └── API call routed through proxy                             │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 6. Task Breakdown
+## 5. Phase 4: Browser Automation (Future)
 
-See Linear tickets and task assignments in the next section.
+### 5.1 Overview
+
+Use Puppeteer/Playwright for actions not supported by API:
+- Login with credentials
+- Actions requiring browser (some DMs, Stories, etc.)
+- Account verification steps
+
+### 5.2 Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      BROWSER AUTOMATION (Future)                        │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────┐     │
+│  │                    Browser Worker Pool                          │     │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐       │     │
+│  │  │ Worker 1 │  │ Worker 2 │  │ Worker 3 │  │ Worker N │       │     │
+│  │  │ (Chrome) │  │ (Chrome) │  │ (Chrome) │  │ (Chrome) │       │     │
+│  │  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘       │     │
+│  │       │             │             │             │              │     │
+│  │       ▼             ▼             ▼             ▼              │     │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐       │     │
+│  │  │ Proxy 1  │  │ Proxy 2  │  │ Proxy 3  │  │ Proxy N  │       │     │
+│  │  └──────────┘  └──────────┘  └──────────┘  └──────────┘       │     │
+│  └────────────────────────────────────────────────────────────────┘     │
+│                                                                          │
+│  Actions supported:                                                     │
+│  - Login with username/password/2FA                                     │
+│  - Actions not available via API                                        │
+│  - Account verification flows                                           │
+│  - Session management                                                   │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### 5.3 Service Structure
+
+```typescript
+// Future: Browser automation service
+interface BrowserAutomationService {
+  // Login to platform using stored credentials
+  login(accountId: string): Promise<SessionInfo>;
+  
+  // Perform action requiring browser
+  performAction(accountId: string, action: BrowserAction): Promise<ActionResult>;
+  
+  // Verify account (email/phone verification)
+  verify(accountId: string, verificationData: VerificationData): Promise<void>;
+}
+
+interface BrowserAction {
+  type: 'dm' | 'story' | 'follow' | 'like' | 'comment';
+  payload: Record<string, unknown>;
+}
+```
+
+---
+
+## 6. Task Breakdown (Phase 2)
+
+### 6.1 Backend Tasks
+
+| Task | Description | Effort |
+|------|-------------|--------|
+| Update Prisma schema | Add `accountId` to SoulIntegrationMapping | Small |
+| Update Account DTO | Add `integrationId` field | Small |
+| Update Account Repository | Add link/unlink methods | Small |
+| Update Account Service | Add integration linking logic | Medium |
+| Update Accounts Controller | Add PATCH endpoint | Small |
+| Update Matrix Service | Auto-populate accountId | Medium |
+| Write tests | Unit tests for new functionality | Medium |
+
+### 6.2 Frontend Tasks
+
+| Task | Description | Effort |
+|------|-------------|--------|
+| Update Account types | Add integrationId | Small |
+| Create AccountIntegrationLink component | Dropdown for linking | Medium |
+| Update Account form | Include integration link UI | Small |
+| Update Matrix cell | Show account status | Small |
+| Update Account list | Show linked status | Small |
+
+### 6.3 Total Effort Estimate
+
+| Phase | Effort |
+|-------|--------|
+| Phase 2 (Account-Integration Link) | ~2-3 days |
+| Phase 3 (Proxy-based posting) | ~1 week |
+| Phase 4 (Browser automation) | ~2-3 weeks |
+
+---
+
+## 7. File Changes Summary
+
+### 7.1 Files to Modify
+
+```
+libraries/nestjs-libraries/src/
+├── database/prisma/
+│   └── schema.prisma                          # Add accountId to mapping
+├── database/prisma/matrix/
+│   ├── matrix.repository.ts                   # Update create with accountId
+│   └── matrix.service.ts                      # Auto-populate accountId
+├── database/firestore/collections/accounts/
+│   ├── account.repository.ts                  # Add integration link methods
+│   └── account.service.ts                     # Add integration linking logic
+└── dtos/axon/
+    └── account.dto.ts                         # Add integrationId field
+
+apps/backend/src/api/routes/
+└── accounts.controller.ts                     # Add link endpoint
+
+apps/frontend/src/components/axon/
+├── types.ts                                   # Add integrationId to Account
+├── accounts/
+│   ├── account-form.tsx                       # Add integration selector
+│   └── accounts-list.component.tsx            # Show linked status
+└── matrix/
+    └── matrix-cell.component.tsx              # Show account info
+```
+
+### 7.2 New Files
+
+```
+apps/frontend/src/components/axon/accounts/
+└── account-integration-link.tsx               # NEW: Integration linking component
+```
+
+---
+
+## 8. Related Documents
+
+- **PRD**: `/docs/prd/M4-Soul-Channel-Matrix.md`
+- **Tasks**: `/docs/tasks/m4-matrix-tasks.md`
+- **Linear Epic**: [WEC-164](https://linear.app/wecrew-axon/issue/WEC-164)
