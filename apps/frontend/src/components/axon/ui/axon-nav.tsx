@@ -1,8 +1,8 @@
 'use client';
 
-import { FC } from 'react';
+import { FC, useEffect, useTransition, useCallback } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import clsx from 'clsx';
 
 interface NavItem {
@@ -36,6 +36,15 @@ const navItems: NavItem[] = [
 
 export const AxonNav: FC = () => {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  // Prefetch all AXON route bundles on mount so they're cached before user clicks
+  useEffect(() => {
+    for (const item of navItems) {
+      router.prefetch(item.href);
+    }
+  }, [router]);
 
   const isActive = (href: string) => {
     if (href === '/axon/matrix') {
@@ -44,8 +53,23 @@ export const AxonNav: FC = () => {
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
+  const handleClick = useCallback(
+    (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+      // Skip if already on this route
+      if (isActive(href)) {
+        e.preventDefault();
+        return;
+      }
+      e.preventDefault();
+      startTransition(() => {
+        router.push(href);
+      });
+    },
+    [pathname, router]
+  );
+
   return (
-    <nav className="bg-newBgColor border-b border-newBgLineColor">
+    <nav className="bg-newBgColor border-b border-newBgLineColor relative">
       <div className="px-6">
         <div className="flex items-center">
           {/* Navigation tabs */}
@@ -54,6 +78,8 @@ export const AxonNav: FC = () => {
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={true}
+                onClick={(e) => handleClick(e, item.href)}
                 className={clsx(
                   'px-4 py-3 text-[14px] font-medium border-b-2 transition-colors',
                   isActive(item.href)
@@ -67,6 +93,13 @@ export const AxonNav: FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Transition progress bar */}
+      {isPending && (
+        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-newBgLineColor overflow-hidden">
+          <div className="h-full bg-btnPrimary w-full animate-pulse" />
+        </div>
+      )}
     </nav>
   );
 };

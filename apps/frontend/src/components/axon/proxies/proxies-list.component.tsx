@@ -1,7 +1,8 @@
 'use client';
 
 import { FC, useCallback, useState, useMemo } from 'react';
-import { useProxies, useProxyMutations } from '../hooks';
+import { useProxyMutations } from '../hooks/use-axon-api';
+import { useAxonData, useAxonScrollPreservation } from '../context/axon-data-provider';
 import { StatusBadge } from '../ui/status-badge';
 import { ProxyTypeBadge } from '../ui/purpose-badge';
 import { useToaster } from '@gitroom/react/toaster/toaster';
@@ -10,52 +11,70 @@ import type { Proxy, ProxyType, ProxyStatus, CreateProxyDto, AccountPurpose } fr
 import { DEFAULT_PROXY_PURPOSE_MATRIX } from '../types';
 import { AddProxyModal } from './add-proxy-modal';
 
+/**
+ * ProxiesListComponent (WEC-190, WEC-193)
+ *
+ * Updated to use AxonDataProvider for:
+ * 1. Pre-fetched data from layout level (no loading flash on tab switch)
+ * 2. Preserved filter state across tab navigation
+ * 3. Preserved scroll position when returning to this tab
+ */
 export const ProxiesListComponent: FC = () => {
-  const { data: proxies, isLoading, mutate } = useProxies();
+  // Get data and filter state from AxonDataProvider context
+  const {
+    proxies: data,
+    isLoadingProxies: isLoading,
+    proxiesError: error,
+    mutateProxies: mutate,
+    filters: contextFilters,
+    setProxiesFilters,
+  } = useAxonData();
+
   const { createProxy, deleteProxy, testProxy, rotateProxy } = useProxyMutations();
   const toaster = useToaster();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [filterType, setFilterType] = useState<ProxyType | 'all'>('all');
-  const [filterStatus, setFilterStatus] = useState<ProxyStatus | 'all'>('all');
   const [testingProxyId, setTestingProxyId] = useState<string | null>(null);
 
+  // Use filter state from context instead of local useState
+  const filterType = (contextFilters.proxies.type as ProxyType | 'all' | undefined) || 'all';
+  const filterStatus = (contextFilters.proxies.status as ProxyStatus | 'all' | undefined) || 'all';
+
+  // Scroll preservation hook
+  const { containerRef, handleScroll } = useAxonScrollPreservation('proxies');
+
   const filteredProxies = useMemo(() => {
-    if (!proxies) return [];
-    return proxies.filter((proxy) => {
+    if (!data) return [];
+    return data.filter((proxy) => {
       if (filterType !== 'all' && proxy.type !== filterType) return false;
       if (filterStatus !== 'all' && proxy.status !== filterStatus) return false;
       return true;
     });
-  }, [proxies, filterType, filterStatus]);
+  }, [data, filterType, filterStatus]);
 
   const proxyStats = useMemo(() => {
-    if (!proxies) return null;
+    if (!data) return null;
     return {
-      total: proxies.length,
-      active: proxies.filter((p) => p.status === 'active').length,
-      residential: proxies.filter((p) => p.type === 'residential').length,
-      datacenter: proxies.filter((p) => p.type === 'datacenter').length,
-      mobile: proxies.filter((p) => p.type === 'mobile').length,
-      isp: proxies.filter((p) => p.type === 'isp').length,
+      total: data.length,
+      active: data.filter((p) => p.status === 'active').length,
+      residential: data.filter((p) => p.type === 'residential').length,
+      datacenter: data.filter((p) => p.type === 'datacenter').length,
+      mobile: data.filter((p) => p.type === 'mobile').length,
+      isp: data.filter((p) => p.type === 'isp').length,
       avgLatency: Math.round(
-        proxies.filter((p) => p.latency).reduce((acc, p) => acc + (p.latency || 0), 0) /
-          (proxies.filter((p) => p.latency).length || 1)
+        data.filter((p) => p.latency).reduce((acc, p) => acc + (p.latency || 0), 0) /
+          (data.filter((p) => p.latency).length || 1)
       ),
       avgSuccessRate:
-        proxies.filter((p) => p.successRate).reduce((acc, p) => acc + (p.successRate || 0), 0) /
-        (proxies.filter((p) => p.successRate).length || 1),
+        data.filter((p) => p.successRate).reduce((acc, p) => acc + (p.successRate || 0), 0) /
+        (data.filter((p) => p.successRate).length || 1),
     };
-  }, [proxies]);
+  }, [data]);
 
   const handleAddProxy = useCallback(
-    async (data: CreateProxyDto) => {
+    async (proxyData: CreateProxyDto) => {
       try {
-        const newProxy = await createProxy(data);
-        // Force revalidation bypassing deduplication
-        await mutate(
-          (currentData) => currentData ? [newProxy, ...currentData] : [newProxy],
-          { revalidate: true }
-        );
+        await createProxy(proxyData);
+        await mutate();
         setIsAddModalOpen(false);
         toaster.show('Proxy added successfully', 'success');
       } catch (error) {
@@ -75,11 +94,7 @@ export const ProxiesListComponent: FC = () => {
 
       try {
         await deleteProxy(proxy.id);
-        // Force revalidation bypassing deduplication
-        await mutate(
-          (currentData) => currentData?.filter((p) => p.id !== proxy.id) ?? [],
-          { revalidate: true }
-        );
+        await mutate();
         toaster.show('Proxy deleted successfully', 'success');
       } catch (error) {
         toaster.show('Failed to delete proxy', 'warning');
@@ -93,8 +108,7 @@ export const ProxiesListComponent: FC = () => {
       setTestingProxyId(proxy.id);
       try {
         const result = await testProxy(proxy.id);
-        // Force revalidation to get updated proxy stats
-        await mutate(undefined, { revalidate: true });
+        await mutate();
         if (result.success) {
           toaster.show(`Proxy test successful - Latency: ${result.latency}ms`, 'success');
         } else {
@@ -113,14 +127,33 @@ export const ProxiesListComponent: FC = () => {
     async (proxy: Proxy) => {
       try {
         await rotateProxy(proxy.id);
-        // Force revalidation to get updated proxy data
-        await mutate(undefined, { revalidate: true });
+        await mutate();
         toaster.show('Proxy rotated successfully', 'success');
       } catch (error) {
         toaster.show('Failed to rotate proxy', 'warning');
       }
     },
     [rotateProxy, mutate, toaster]
+  );
+
+  const handleFilterTypeChange = useCallback(
+    (value: ProxyType | 'all') => {
+      setProxiesFilters({
+        ...contextFilters.proxies,
+        type: value === 'all' ? undefined : value,
+      });
+    },
+    [contextFilters.proxies, setProxiesFilters]
+  );
+
+  const handleFilterStatusChange = useCallback(
+    (value: ProxyStatus | 'all') => {
+      setProxiesFilters({
+        ...contextFilters.proxies,
+        status: value === 'all' ? undefined : value,
+      });
+    },
+    [contextFilters.proxies, setProxiesFilters]
   );
 
   if (isLoading) {
@@ -145,7 +178,11 @@ export const ProxiesListComponent: FC = () => {
   }
 
   return (
-    <div className="flex-1 bg-newBgColorInner p-6">
+    <div
+      ref={containerRef}
+      onScroll={handleScroll}
+      className="flex-1 bg-newBgColorInner p-6 overflow-auto"
+    >
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold">Proxy Pool</h1>
@@ -206,7 +243,7 @@ export const ProxiesListComponent: FC = () => {
               </div>
               <p className="text-xs text-textItemBlur mt-2">
                 {
-                  proxies?.filter(
+                  data?.filter(
                     (p) =>
                       DEFAULT_PROXY_PURPOSE_MATRIX[purpose].includes(p.type) &&
                       p.status === 'active'
@@ -223,7 +260,7 @@ export const ProxiesListComponent: FC = () => {
       <div className="flex flex-wrap gap-3 mb-4">
         <select
           value={filterType}
-          onChange={(e) => setFilterType(e.target.value as ProxyType | 'all')}
+          onChange={(e) => handleFilterTypeChange(e.target.value as ProxyType | 'all')}
           className="px-3 py-2 bg-newBgColorInner text-newTextColor rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none text-sm"
         >
           <option value="all">All Types</option>
@@ -234,7 +271,7 @@ export const ProxiesListComponent: FC = () => {
         </select>
         <select
           value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value as ProxyStatus | 'all')}
+          onChange={(e) => handleFilterStatusChange(e.target.value as ProxyStatus | 'all')}
           className="px-3 py-2 bg-newBgColorInner text-newTextColor rounded-[8px] border border-newTableBorder focus:border-btnPrimary focus:outline-none text-sm"
         >
           <option value="all">All Statuses</option>
@@ -248,7 +285,7 @@ export const ProxiesListComponent: FC = () => {
       {/* Proxy List */}
       {filteredProxies.length === 0 ? (
         <div className="text-center py-16 text-textItemBlur">
-          {proxies?.length === 0 ? (
+          {data?.length === 0 ? (
             <>
               <p className="mb-2">No proxies configured</p>
               <button

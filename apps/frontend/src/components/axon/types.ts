@@ -17,6 +17,12 @@ export interface Soul {
   accounts: Account[];
   proxyId?: string;
   proxy?: Proxy;
+  stats?: {
+    totalAccounts: number;
+    activeAccounts: number;
+    totalPosts: number;
+    avgEngagementRate: number;
+  };
   metadata?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
